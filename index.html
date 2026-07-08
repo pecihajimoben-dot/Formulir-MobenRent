@@ -13,17 +13,10 @@
         .form-group label { display: block; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
 
-        /* Daftar jenis foto - tampilan memanjang (vertikal), bukan dropdown */
-        .photo-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .btn-photo {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 14px; background: #f8f9fa; color: #333; border: 2px solid #ddd;
-            border-radius: 8px; cursor: pointer; width: 100%; font-size: 15px; font-weight: bold;
-            text-align: left; margin-bottom: 0;
-        }
-        .btn-photo.active-type { border-color: #007bff; background: #eaf3ff; }
+        h3.photo-title { margin-top: 0; color: #333; }
+        p.hint { color: #777; font-size: 13px; margin-top: -8px; margin-bottom: 12px; }
 
-        .camera-container { position: relative; width: 100%; max-width: 400px; margin: 15px auto; overflow: hidden; border-radius: 8px; background: #000; }
+        .camera-container { position: relative; width: 100%; max-width: 400px; margin: 10px auto; overflow: hidden; border-radius: 8px; background: #000; }
         video { width: 100%; height: auto; display: block; }
 
         /* Overlay bingkai foto - kotak "jendela" ditengah, area luar digelapkan */
@@ -42,9 +35,27 @@
         button { padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
         button.btn-secondary { background: #007bff; }
         button.btn-warning { background: #ffc107; color: black; }
+        button.btn-outline { background: #fff; color: #333; border: 2px solid #ccc; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         canvas { display: none; }
-        .status-badge { display: inline-block; padding: 4px 8px; background: #ddd; font-size: 12px; border-radius: 3px; font-weight: bold; }
-        .status-badge.ready { background: #28a745; color: white; }
+
+        /* Indikator sedang menyimpan foto */
+        .save-indicator {
+            display: none; text-align: center; padding: 30px 10px; margin: 10px auto; max-width: 400px;
+            background: #fff3cd; border: 1px solid #ffe69c; border-radius: 8px; color: #664d03; font-weight: bold;
+        }
+        .save-indicator .spinner {
+            display: inline-block; width: 16px; height: 16px; border: 3px solid #664d03;
+            border-top-color: transparent; border-radius: 50%; margin-right: 8px;
+            animation: spin 0.8s linear infinite; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .thumb-area { text-align: center; margin: 10px 0; }
+        .preview-img { max-width: 100%; border-radius: 8px; border: 2px solid #28a745; }
+        .save-ok { color: #28a745; font-weight: bold; margin-top: 6px; }
+
+        .progress-text { text-align:center; color:#999; font-size:13px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -62,7 +73,7 @@
                 <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
             </select>
         </div>
-        <button class="btn-secondary" onclick="changeStep(2)">Lanjut ➡️</button>
+        <button class="btn-secondary" onclick="changeStep('step2')">Lanjut ➡️</button>
     </div>
 
     <div id="step2" class="step">
@@ -72,35 +83,60 @@
             <input type="text" id="lokasi" readonly style="background: #e9ecef;">
             <input type="hidden" id="gpsAccuracy"><input type="hidden" id="userIp">
         </div>
-        <button class="btn-secondary" onclick="changeStep(3)">Lanjut ke Kamera ➡️</button>
+        <button class="btn-secondary" onclick="startPhotoFlow()">Lanjut ke Kamera ➡️</button>
     </div>
 
-    <div id="step3" class="step">
-        <div class="form-group">
-            <label>Pilih & Ambil Foto (urutkan dari atas ke bawah):</label>
-            <div class="photo-list">
-                <button type="button" class="btn-photo" id="type-ktp" onclick="openCamera('ktp')">
-                    <span>1. Foto KTP</span><span id="badge-ktp" class="status-badge">Belum</span>
-                </button>
-                <button type="button" class="btn-photo" id="type-selfie" onclick="openCamera('selfie')">
-                    <span>2. Selfie + KTP</span><span id="badge-selfie" class="status-badge">Belum</span>
-                </button>
-                <button type="button" class="btn-photo" id="type-rumah" onclick="openCamera('rumah')">
-                    <span>3. Foto Rumah Jarak 2M</span><span id="badge-rumah" class="status-badge">Belum</span>
-                </button>
-                <button type="button" class="btn-photo" id="type-kaleng" onclick="openCamera('kaleng')">
-                    <span>4. Foto Kaleng No Rumah</span><span id="badge-kaleng" class="status-badge">Belum</span>
-                </button>
-            </div>
-        </div>
+    <!-- Halaman 1: Foto KTP -->
+    <div id="step_ktp" class="step">
+        <div class="progress-text">Foto 1 dari 4</div>
+        <h3 class="photo-title">1. Foto KTP</h3>
+        <p class="hint">Posisikan KTP mendatar (landscape) di dalam bingkai, pastikan tulisan terbaca jelas.</p>
+        <div id="thumb-ktp" class="thumb-area"></div>
+    </div>
 
-        <div class="camera-container" id="cameraContainer" style="display:none;">
-            <video id="video" autoplay playsinline muted></video>
-            <div id="cameraOverlay" class="overlay"></div>
-        </div>
-        <canvas id="canvas"></canvas>
-        <button id="btnCapture" onclick="capturePhotoTemporarily()" style="display:none;">📸 Ambil Foto</button>
+    <!-- Halaman 2: Selfie + KTP -->
+    <div id="step_selfie" class="step">
+        <div class="progress-text">Foto 2 dari 4</div>
+        <h3 class="photo-title">2. Selfie + KTP</h3>
+        <p class="hint">Kamera depan aktif otomatis. Pegang KTP di dada, wajah dan KTP harus terlihat jelas.</p>
+        <div id="thumb-selfie" class="thumb-area"></div>
+    </div>
 
+    <!-- Halaman 3: Foto Rumah -->
+    <div id="step_rumah" class="step">
+        <div class="progress-text">Foto 3 dari 4</div>
+        <h3 class="photo-title">3. Foto Rumah Jarak 2M</h3>
+        <p class="hint">Ambil foto rumah dari jarak kurang lebih 2 meter, pastikan tampak depan rumah masuk bingkai.</p>
+        <div id="thumb-rumah" class="thumb-area"></div>
+    </div>
+
+    <!-- Halaman 4: Foto Kaleng No Rumah -->
+    <div id="step_kaleng" class="step">
+        <div class="progress-text">Foto 4 dari 4</div>
+        <h3 class="photo-title">4. Foto Kaleng No Rumah</h3>
+        <p class="hint">Ambil foto papan/kaleng nomor rumah dengan jelas.</p>
+        <div id="thumb-kaleng" class="thumb-area"></div>
+    </div>
+
+    <!-- Area kamera & kontrol bersama, dipakai bergantian untuk 4 halaman di atas -->
+    <div class="camera-container" id="cameraContainer" style="display:none;">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="cameraOverlay" class="overlay"></div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <div id="saveIndicator" class="save-indicator"><span class="spinner"></span>Menyimpan foto...</div>
+
+    <div id="captureControls" style="display:none;">
+        <button id="btnCapture" onclick="capturePhotoTemporarily()">📸 Ambil Foto</button>
+        <button id="btnRetake" class="btn-outline" onclick="retakePhoto()" style="display:none;">🔄 Ambil Ulang</button>
+        <button id="btnNext" class="btn-secondary" onclick="goNext()" style="display:none;" disabled>Lanjut ➡️</button>
+    </div>
+
+    <!-- Halaman terakhir: kirim pendaftaran -->
+    <div id="step_submit" class="step">
+        <h3 class="photo-title">Semua Foto Sudah Lengkap</h3>
+        <p class="hint">Periksa kembali data Anda, lalu kirim pendaftaran.</p>
         <button id="btnSubmitAll" onclick="submitFormKolektif()">KIRIM PENDAFTARAN</button>
         <div id="statusMessage" style="text-align:center; font-weight:bold;"></div>
     </div>
@@ -109,18 +145,33 @@
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzJCp-Vf4B4LmkqGVC6M6sQrxceXTkHRmgSqgjbNhheIBdICaRuY07LZkIG2uhDC6yW/exec";
     let tempFiles = { ktp: null, selfie: null, rumah: null, kaleng: null };
-    let currentDocType = null;
     let currentStream = null;
 
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const overlay = document.getElementById('cameraOverlay');
-    const btnCapture = document.getElementById('btnCapture');
     const cameraContainer = document.getElementById('cameraContainer');
+    const captureControls = document.getElementById('captureControls');
+    const btnCapture = document.getElementById('btnCapture');
+    const btnRetake = document.getElementById('btnRetake');
+    const btnNext = document.getElementById('btnNext');
+    const saveIndicator = document.getElementById('saveIndicator');
+
+    // Urutan halaman foto
+    const photoFlow = [
+        { step: 'step_ktp',    type: 'ktp' },
+        { step: 'step_selfie', type: 'selfie' },
+        { step: 'step_rumah',  type: 'rumah' },
+        { step: 'step_kaleng', type: 'kaleng' }
+    ];
+    let flowIndex = 0;
 
     window.onload = () => fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => document.getElementById('userIp').value = d.ip).catch(e=>console.log(e));
 
-    function changeStep(n) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById('step' + n).classList.add('active'); }
+    function changeStep(id) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
 
     function getLocation() {
         if (navigator.geolocation) {
@@ -131,7 +182,7 @@
         }
     }
 
-    // Frame bingkai per jenis foto
+    // Bingkai per jenis foto
     function overlayClassFor(type) {
         if (type === 'ktp') return 'ktp-mode';
         if (type === 'selfie') return 'selfie-mode';
@@ -143,43 +194,102 @@
         return type === 'selfie' ? 'user' : 'environment';
     }
 
+    // Reset tampilan halaman foto (kamera hidup, tombol ambil foto muncul)
+    function prepareStepUI(type) {
+        cameraContainer.style.display = 'block';
+        captureControls.style.display = 'block';
+        video.style.display = 'block';
+        overlay.style.display = 'block';
+        btnCapture.style.display = 'block';
+        btnRetake.style.display = 'none';
+        btnNext.style.display = 'none';
+        btnNext.disabled = true;
+        saveIndicator.style.display = 'none';
+
+        const thumb = document.getElementById('thumb-' + type);
+        if (thumb) thumb.innerHTML = '';
+    }
+
     async function openCamera(type) {
-        currentDocType = type;
-
-        // tandai tombol jenis foto yang sedang aktif
-        document.querySelectorAll('.btn-photo').forEach(b => b.classList.remove('active-type'));
-        document.getElementById('type-' + type).classList.add('active-type');
-
-        // set bingkai sesuai jenis foto
         overlay.className = 'overlay ' + overlayClassFor(type);
 
-        // hentikan stream kamera sebelumnya (kalau ada) sebelum ganti kamera depan/belakang
         if (currentStream) {
             currentStream.getTracks().forEach(t => t.stop());
             currentStream = null;
         }
-
         try {
             currentStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingModeFor(type) },
                 audio: false
             });
             video.srcObject = currentStream;
-            cameraContainer.style.display = 'block';
-            btnCapture.style.display = 'block';
         } catch (err) {
             alert("Akses kamera ditolak atau tidak tersedia.");
         }
     }
 
+    function startPhotoFlow() {
+        flowIndex = 0;
+        const first = photoFlow[flowIndex];
+        changeStep(first.step);
+        prepareStepUI(first.type);
+        openCamera(first.type);
+    }
+
+    function goNext() {
+        flowIndex++;
+        if (flowIndex < photoFlow.length) {
+            const next = photoFlow[flowIndex];
+            changeStep(next.step);
+            prepareStepUI(next.type);
+            openCamera(next.type);
+        } else {
+            if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+            cameraContainer.style.display = 'none';
+            captureControls.style.display = 'none';
+            changeStep('step_submit');
+        }
+    }
+
+    // Ambil foto + tampilkan indikator "sedang menyimpan" sebelum konfirmasi tersimpan
     function capturePhotoTemporarily() {
-        if (!currentDocType) return;
-        const t = currentDocType;
+        const t = photoFlow[flowIndex].type;
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        tempFiles[t] = canvas.toDataURL('image/jpeg', 0.8);
-        document.getElementById('badge-' + t).innerHTML = "✓ Siap";
-        document.getElementById('badge-' + t).className = "status-badge ready";
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+        // Tampilkan indikator menyimpan, sembunyikan kamera sementara
+        btnCapture.style.display = 'none';
+        video.style.display = 'none';
+        overlay.style.display = 'none';
+        saveIndicator.style.display = 'block';
+
+        setTimeout(() => {
+            tempFiles[t] = dataUrl;
+            saveIndicator.style.display = 'none';
+
+            const thumb = document.getElementById('thumb-' + t);
+            thumb.innerHTML = '<img src="' + dataUrl + '" class="preview-img"><div class="save-ok">✓ Foto berhasil disimpan</div>';
+
+            btnRetake.style.display = 'block';
+            btnNext.style.display = 'block';
+            btnNext.disabled = false;
+        }, 700);
+    }
+
+    function retakePhoto() {
+        const t = photoFlow[flowIndex].type;
+        tempFiles[t] = null;
+        const thumb = document.getElementById('thumb-' + t);
+        if (thumb) thumb.innerHTML = '';
+
+        cameraContainer.style.display = 'block';
+        video.style.display = 'block';
+        overlay.style.display = 'block';
+        btnCapture.style.display = 'block';
+        btnRetake.style.display = 'none';
+        btnNext.style.display = 'none';
+        btnNext.disabled = true;
     }
 
     function submitFormKolektif() {
@@ -196,7 +306,6 @@
         fetch(GAS_URL, { method: 'POST', body: JSON.stringify(p) })
         .then(r => r.json()).then(res => {
             document.getElementById('statusMessage').innerText = res.message;
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
         }).catch(e => document.getElementById('statusMessage').innerText = "Gagal Jaringan.");
     }
 </script>

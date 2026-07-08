@@ -708,11 +708,14 @@
                 if (type === 'ktp_istri') extractedData.nikIstri = numberFound;
                 if (type === 'kk') extractedData.noKk = numberFound;
                 
+                ocrValue.placeholder = "";
                 setOcrStatus('success', '✓ Nomor terbaca, cek kembali ketepatannya.');
             } else {
+                ocrValue.placeholder = "Ketik nomor secara manual";
                 setOcrStatus('fail', 'Tidak terbaca jelas. Harap ketik nomor secara manual.');
             }
         } catch (err) {
+            ocrValue.placeholder = "Ketik nomor secara manual";
             setOcrStatus('fail', 'Gagal memproses gambar, silakan isi manual.');
         }
     }

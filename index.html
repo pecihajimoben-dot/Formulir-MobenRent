@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
     :root{
         --navy:#16213E;
@@ -210,6 +211,38 @@
     }
     .save-toast.show{ opacity:1; transform:translate(-50%,0); }
 
+    .nik-group{
+        margin: 4px auto 16px; max-width:400px;
+    }
+    .nik-group label{
+        display:block; font-weight:600; font-size:13px;
+        margin-bottom:6px; color:var(--navy);
+    }
+    .nik-group input{
+        width:100%; padding:12px 14px; box-sizing:border-box;
+        border:1.5px solid var(--line); border-radius:10px;
+        font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
+        background:#FBFAF7; letter-spacing:0.5px;
+    }
+    .nik-group input:focus{
+        outline:none; border-color:var(--gold); background:#fff;
+        box-shadow:0 0 0 3px rgba(232,163,61,0.18);
+    }
+    .ocr-status{
+        font-size:12px; margin-top:6px; display:flex; align-items:center; gap:6px;
+        color:var(--muted); font-weight:600;
+    }
+    .ocr-status.reading{ color:var(--gold); }
+    .ocr-status.success{ color:var(--green); }
+    .ocr-status.fail{ color:var(--red); }
+    .ocr-spinner{
+        width:12px; height:12px; border-radius:50%;
+        border:2px solid rgba(232,163,61,0.3); border-top-color:var(--gold);
+        animation: spin .7s linear infinite; display:none;
+    }
+    .ocr-status.reading .ocr-spinner{ display:inline-block; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+
     #statusMessage {
         text-align: center; font-weight: 600; font-size:13.5px;
         margin-top:10px; color:var(--navy); min-height:18px;
@@ -292,6 +325,12 @@
                 <div class="save-toast" id="saveToast">✅ Foto tersimpan</div>
             </div>
 
+            <div class="nik-group" id="nikGroup" style="display:none;">
+                <label>NIK KTP</label>
+                <input type="text" id="nikValue" inputmode="numeric" maxlength="16" placeholder="Akan terisi otomatis, atau isi manual">
+                <div class="ocr-status" id="ocrStatus"><span class="ocr-spinner"></span><span id="ocrStatusText"></span></div>
+            </div>
+
             <button id="btnCapture" class="btn-primary" onclick="capturePhotoTemporarily()">📸 Ambil Foto</button>
             <button id="btnRetake" class="btn-ghost" onclick="retakePhoto()" style="display:none;">🔄 Ambil Ulang</button>
 
@@ -320,7 +359,7 @@
         kaleng: 'Foto Kaleng No Rumah'
     };
     const photoHints = {
-        ktp: 'Pastikan tulisan di KTP terbaca jelas dan tidak buram.',
+        ktp: 'Pastikan tulisan di KTP terbaca jelas dan tidak buram. NIK akan dicoba dibaca otomatis.',
         selfie: 'Pegang KTP sejajar wajah, pastikan wajah dan kartu terlihat jelas.',
         rumah: 'Ambil foto rumah dari jarak sekitar 2 meter, tampak keseluruhan.',
         kaleng: 'Ambil foto kaleng / plat nomor rumah dengan jelas.'
@@ -416,6 +455,8 @@
         }
         updatePhotoDots(type);
 
+        document.getElementById('nikGroup').style.display = (type === 'ktp') ? 'block' : 'none';
+
         if (tempFiles[type]) {
             showPreview(type);
         } else {
@@ -463,6 +504,8 @@
         if (currentStream) { currentStream.getTracks().forEach(tr => tr.stop()); currentStream = null; }
         showPreview(t);
         showSaveToast();
+
+        if (t === 'ktp') runOcrNik(tempFiles.ktp);
     }
 
     function showSaveToast() {
@@ -472,10 +515,48 @@
         showSaveToast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
     }
 
+    function setOcrStatus(state, text) {
+        const el = document.getElementById('ocrStatus');
+        el.className = 'ocr-status' + (state ? ' ' + state : '');
+        document.getElementById('ocrStatusText').innerText = text;
+    }
+
+    function extractNik(rawText) {
+        // NIK KTP Indonesia selalu 16 digit angka berurutan
+        const cleaned = rawText.replace(/[^0-9]/g, ' ');
+        const matches = cleaned.match(/\d{16}/g);
+        if (matches && matches.length) return matches[0];
+        // fallback: gabungkan deretan panjang jika OCR memecah jadi beberapa kelompok
+        const compact = rawText.replace(/[^0-9]/g, '');
+        const longRun = compact.match(/\d{16}/);
+        return longRun ? longRun[0] : null;
+    }
+
+    async function runOcrNik(imageDataUrl) {
+        const nikInput = document.getElementById('nikValue');
+        setOcrStatus('reading', 'Membaca NIK dari foto KTP...');
+        try {
+            const result = await Tesseract.recognize(imageDataUrl, 'ind', { });
+            const nik = extractNik(result.data.text || '');
+            if (nik) {
+                nikInput.value = nik;
+                setOcrStatus('success', '✓ NIK terbaca otomatis, cek kembali sebelum lanjut.');
+            } else {
+                setOcrStatus('fail', 'NIK tidak terbaca jelas, silakan isi manual.');
+            }
+        } catch (err) {
+            setOcrStatus('fail', 'Gagal membaca otomatis, silakan isi NIK manual.');
+        }
+    }
+
     function retakePhoto() {
         const t = currentDocType;
         tempFiles[t] = null;
         document.getElementById('saveToast').classList.remove('show');
+        if (t === 'ktp') {
+            document.getElementById('nikValue').value = '';
+            setOcrStatus('', '');
+        }
         showCameraForCapture(t);
         updatePhotoDots(t);
     }
@@ -503,7 +584,7 @@
             nama: document.getElementById('nama').value, region: document.getElementById('region').value,
             lokasi: document.getElementById('lokasi').value, sosmed: document.getElementById('sosmed').value,
             kontakDarurat: document.getElementById('kontakDarurat').value, gpsAccuracy: document.getElementById('gpsAccuracy').value,
-            userIp: document.getElementById('userIp').value, files: tempFiles
+            userIp: document.getElementById('userIp').value, nik: document.getElementById('nikValue').value, files: tempFiles
         };
         if (!p.nama || !p.lokasi.includes("http") || !tempFiles.ktp || !tempFiles.selfie) return alert("Lengkapi data dan foto utama!");
 

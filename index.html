@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Formulir Sewa Moben</title>
+<title>Formulir Pendaftaran & Verifikasi Sewa Moben</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Tesseract JS untuk OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <style>
     :root{
         --navy:#16213E;
@@ -70,14 +72,13 @@
         font-size:13px;
     }
 
-    /* progress bar tunggal */
     .progress-wrap{ margin-top:20px; position:relative; z-index:1; }
     .progress-track{
         width:100%; height:6px; border-radius:6px;
         background: rgba(255,255,255,0.16); overflow:hidden;
     }
     .progress-fill{
-        height:100%; width:16.6%; border-radius:6px;
+        height:100%; width:8%; border-radius:6px;
         background: var(--gold); transition:.3s ease;
     }
     .progress-label{
@@ -110,6 +111,10 @@
         background:#FBFAF7;
         transition:.15s;
     }
+    .form-group input[type="file"] {
+        padding: 9px 12px;
+        background: #fff;
+    }
     .form-group input:focus, .form-group select:focus{
         outline:none; border-color:var(--gold); background:#fff;
         box-shadow:0 0 0 3px rgba(232,163,61,0.18);
@@ -124,6 +129,7 @@
         letter-spacing:-0.01em;
     }
     button:active{ transform: scale(0.98); }
+    button:disabled{ opacity: 0.7; cursor: not-allowed; }
 
     .btn-primary{ background: var(--navy); color:#fff; }
     .btn-primary:hover{ background:#0E1830; }
@@ -136,6 +142,7 @@
     .row-btns button{ margin-bottom:0; }
 
     .hint{ font-size:12px; color:var(--muted); margin:0 0 16px; line-height:1.5; }
+    .file-status { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 4px; display: block; }
 
     .camera-container {
         position: relative; width: 100%; max-width: 400px;
@@ -146,16 +153,15 @@
 
     .overlay {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        border: 3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        border: 3px dashed #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
         box-sizing: border-box; pointer-events: none; transition: 0.2s;
     }
     .overlay.ktp-mode { width: 82%; aspect-ratio: 1.586 / 1; border-radius: 10px; }
     .overlay.wide-mode { width: 92%; aspect-ratio: 4 / 3; border-radius: 6px; }
 
-    /* frame khusus Selfie + KTP: wajah di atas, kartu KTP di bawah */
     .selfie-overlay-group{
         position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-        width:74%; display:flex; flex-direction:column; align-items:center; gap:10px;
+        width:88%; display:flex; flex-direction:column; align-items:center; gap:4px;
         pointer-events:none;
     }
     .selfie-overlay-group .guide-label{
@@ -163,13 +169,13 @@
         margin-bottom:-4px; font-family:'Plus Jakarta Sans',sans-serif;
     }
     .selfie-overlay-group .face-guide{
-        width:52%; aspect-ratio: 3 / 3.6; border-radius: 50% / 44%;
-        border:3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        width:72%; aspect-ratio: 3 / 3.9; border-radius: 50% / 42%;
+        border:3px dashed #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
         box-sizing:border-box;
     }
     .selfie-overlay-group .card-guide{
         width:100%; aspect-ratio: 1.586 / 1; border-radius: 10px;
-        border:3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        border:3px dashed #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
         box-sizing:border-box;
     }
 
@@ -195,13 +201,6 @@
         display:flex; align-items:center; gap:4px;
     }
 
-    .photo-dots{ display:flex; gap:6px; margin:2px 0 14px; }
-    .photo-dots .pd{
-        flex:1; height:4px; border-radius:4px; background:var(--line);
-    }
-    .photo-dots .pd.filled{ background:var(--green); }
-    .photo-dots .pd.active{ background:var(--navy); }
-
     .save-toast{
         position:absolute; bottom:14px; left:50%; transform:translate(-50%,6px);
         background: rgba(47,158,88,0.96); color:#fff; font-size:12.5px; font-weight:700;
@@ -212,7 +211,9 @@
     .save-toast.show{ opacity:1; transform:translate(-50%,0); }
 
     .nik-group{
-        margin: 4px auto 16px; max-width:400px;
+        margin: 4px auto 16px; max-width:400px; padding: 12px;
+        background: rgba(232,163,61,0.08); border-radius: 12px;
+        border: 1px solid rgba(232,163,61,0.3);
     }
     .nik-group label{
         display:block; font-weight:600; font-size:13px;
@@ -220,23 +221,23 @@
     }
     .nik-group input{
         width:100%; padding:12px 14px; box-sizing:border-box;
-        border:1.5px solid var(--line); border-radius:10px;
+        border:1.5px solid var(--gold); border-radius:10px;
         font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
-        background:#FBFAF7; letter-spacing:0.5px;
+        background:#fff; letter-spacing:0.5px; font-weight: 600;
     }
     .nik-group input:focus{
-        outline:none; border-color:var(--gold); background:#fff;
-        box-shadow:0 0 0 3px rgba(232,163,61,0.18);
+        outline:none; border-color:var(--navy);
+        box-shadow:0 0 0 3px rgba(22,33,62,0.1);
     }
     .ocr-status{
-        font-size:12px; margin-top:6px; display:flex; align-items:center; gap:6px;
-        color:var(--muted); font-weight:600;
+        font-size:12px; margin-top:8px; display:flex; align-items:center; gap:6px;
+        color:var(--muted); font-weight:600; line-height: 1.4;
     }
     .ocr-status.reading{ color:var(--gold); }
     .ocr-status.success{ color:var(--green); }
     .ocr-status.fail{ color:var(--red); }
     .ocr-spinner{
-        width:12px; height:12px; border-radius:50%;
+        width:12px; height:12px; border-radius:50%; flex-shrink: 0;
         border:2px solid rgba(232,163,61,0.3); border-top-color:var(--gold);
         animation: spin .7s linear infinite; display:none;
     }
@@ -254,12 +255,12 @@
 <div class="container">
     <div class="header">
         <h2>Pendaftaran Moben</h2>
-        <p>Isi data, kunci lokasi, lalu ambil foto verifikasi</p>
+        <p>Lengkapi data, lokasi, dan dokumen pendukung</p>
         <div class="progress-wrap">
             <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
             <div class="progress-label">
-                <span id="progressLabel">Langkah 1 dari 6</span>
-                <span id="progressName">Data Diri</span>
+                <span id="progressLabel">Langkah 1 dari 12</span>
+                <span id="progressName">Data Pribadi</span>
             </div>
         </div>
     </div>
@@ -267,44 +268,63 @@
     <div class="body-pad">
 
         <div id="step1" class="step active">
-            <p class="step-title">Data Diri</p>
-            <div class="form-group"><label>Nama Lengkap</label><input type="text" id="nama" placeholder="Sesuai KTP"></div>
-            <div class="form-group"><label>Akun Sosmed (IG/FB)</label><input type="text" id="sosmed" placeholder="@username"></div>
-            <div class="form-group"><label>Kontak Darurat</label><input type="text" id="kontakDarurat" placeholder="Nama & nomor HP"></div>
-            <div class="form-group"><label>Wilayah</label>
+            <p class="step-title">Data Pribadi Penyewa</p>
+            <div class="form-group"><label>Nama Lengkap (Sesuai KTP)</label><input type="text" id="nama" placeholder="Masukkan nama lengkap"></div>
+            <div class="form-group"><label>No WA Penyewa</label><input type="tel" id="noWa" placeholder="Contoh: 08123456789"></div>
+            <div class="form-group"><label>Email Akun Ojol</label><input type="email" id="emailOjol" placeholder="email@domain.com"></div>
+            <div class="form-group"><label>Akun Sosial Media (FB, IG, Tiktok, dll)</label><input type="text" id="sosmed" placeholder="Tuliskan nama akun sosmed"></div>
+            <div class="form-group"><label>Kontak Darurat (Istri atau Anak)</label><input type="text" id="kontakDarurat" placeholder="Nama dan Nomor HP"></div>
+            <div class="form-group"><label>Wilayah Domisili</label>
                 <select id="region">
                     <option value="Kota Bekasi">Kota Bekasi</option>
                     <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
+                    <option value="Lainnya">Lainnya</option>
                 </select>
             </div>
-            <button class="btn-secondary" onclick="changeStep(2)">Lanjut ➡️</button>
+            <button class="btn-secondary" onclick="changeStep(2)">Lanjut ke Lokasi ➡️</button>
         </div>
 
         <div id="step2" class="step">
-            <p class="step-title">Lokasi Rumah</p>
+            <p class="step-title">Lokasi Tempat Tinggal</p>
             <div class="form-group">
-                <label>Lokasi GPS Rumah Asli</label>
-                <button class="btn-warning" onclick="getLocation()">📌 Kunci GPS</button>
-                <input type="text" id="lokasi" readonly placeholder="Belum dikunci">
+                <label>Lokasi GPS Rumah Asli (Saat ini)</label>
+                <button class="btn-warning" onclick="getLocation()">📌 Deteksi & Kunci GPS</button>
+                <input type="text" id="lokasi" readonly placeholder="Belum dikunci (Klik tombol di atas)">
                 <input type="hidden" id="gpsAccuracy"><input type="hidden" id="userIp">
             </div>
-            <p class="hint">Pastikan GPS aktif dan akurat agar lokasi rumah tercatat dengan benar.</p>
+            <p class="hint">Pastikan Anda sedang berada di rumah/kontrakan. Aktifkan fitur GPS/Lokasi di HP Anda agar akurat.</p>
             <div class="row-btns">
                 <button class="btn-ghost" onclick="goPrev()">⬅️ Kembali</button>
-                <button class="btn-secondary" onclick="changeStep(3)">Lanjut ke Kamera ➡️</button>
+                <button class="btn-secondary" onclick="changeStep(3)">Lanjut Berkas ➡️</button>
             </div>
         </div>
 
-        <!-- satu template halaman foto, dipakai bergantian untuk KTP / Selfie / Rumah / Kaleng -->
+        <div id="stepUpload" class="step">
+            <p class="step-title">Unggah Screenshot Ojol</p>
+            <p class="hint">Pilih gambar dari galeri HP Anda.</p>
+            
+            <div class="form-group">
+                <label>1. Screenshot Akun GO-JEK / Grab / dll</label>
+                <input type="file" id="fileSsAkun" accept="image/*">
+                <span class="file-status" id="statusSsAkun"></span>
+            </div>
+
+            <div class="form-group">
+                <label>2. Screenshot Pendapatan Ojol 2 Bulan Terakhir</label>
+                <p class="hint" style="margin-top:-4px;">Bisa pilih lebih dari 1 file sekaligus.</p>
+                <input type="file" id="fileSsPendapatan" accept="image/*" multiple>
+                <span class="file-status" id="statusSsPendapatan"></span>
+            </div>
+
+            <div class="row-btns">
+                <button class="btn-ghost" onclick="goPrev()">⬅️ Kembali</button>
+                <button class="btn-secondary" onclick="changeStep(4)">Lanjut ke Kamera ➡️</button>
+            </div>
+        </div>
+
         <div id="stepPhoto" class="step">
             <p class="step-title" id="photoStepTitle">Foto KTP</p>
-            <p class="hint" id="photoStepHint">Pastikan tulisan di KTP terbaca jelas.</p>
-            <div class="photo-dots" id="photoDots">
-                <div class="pd" id="pd-ktp"></div>
-                <div class="pd" id="pd-selfie"></div>
-                <div class="pd" id="pd-rumah"></div>
-                <div class="pd" id="pd-kaleng"></div>
-            </div>
+            <p class="hint" id="photoStepHint">Pastikan tulisan terbaca jelas.</p>
 
             <div class="camera-container" id="cameraContainer">
                 <video id="video" autoplay playsinline muted></video>
@@ -321,13 +341,14 @@
 
             <div class="preview-wrap" id="previewWrap" style="display:none;">
                 <img id="previewImg" alt="Hasil foto">
-                <span class="preview-badge">✓ Siap</span>
-                <div class="save-toast" id="saveToast">✅ Foto tersimpan</div>
+                <span class="preview-badge">✓ Tersimpan</span>
+                <div class="save-toast" id="saveToast">✅ Foto berhasil diambil</div>
             </div>
 
-            <div class="nik-group" id="nikGroup" style="display:none;">
-                <label>NIK KTP</label>
-                <input type="text" id="nikValue" inputmode="numeric" maxlength="16" placeholder="Akan terisi otomatis, atau isi manual">
+            <!-- Area Input Dinamis untuk hasil OCR -->
+            <div class="nik-group" id="ocrGroup" style="display:none;">
+                <label id="ocrLabel">Nomor Dokumen</label>
+                <input type="text" id="ocrValue" inputmode="numeric" maxlength="16" placeholder="Sedang memproses...">
                 <div class="ocr-status" id="ocrStatus"><span class="ocr-spinner"></span><span id="ocrStatusText"></span></div>
             </div>
 
@@ -346,25 +367,39 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzJCp-Vf4B4LmkqGVC6M6sQrxceXTkHRmgSqgjbNhheIBdICaRuY07LZkIG2uhDC6yW/exec";
-    let tempFiles = { ktp: null, selfie: null, rumah: null, kaleng: null };
+    
+    // Array definisi jenis foto yang akan diambil via kamera secara berurutan
+    const photoTypes = [
+        'ktp_penyewa', 'ktp_istri', 'kk', 'sim', 'ktp_penjamin', 
+        'domisili', 'selfie_rumah', 'rumah_2m', 'kaleng_nomor'
+    ];
+    
+    // Konfigurasi teks untuk setiap jenis foto
+    const photoConfig = {
+        ktp_penyewa: { title: '1. Foto KTP Penyewa', hint: 'Posisikan KTP Penyewa di dalam kotak. NIK akan dibaca otomatis.', mode: 'ktp', face: 'environment' },
+        ktp_istri: { title: '2. Foto KTP Istri', hint: 'Posisikan KTP Istri di dalam kotak. NIK akan dibaca otomatis.', mode: 'ktp', face: 'environment' },
+        kk: { title: '3. Foto Kartu Keluarga (KK)', hint: 'Foto utuh lembar KK. Nomor KK akan dibaca otomatis.', mode: 'wide', face: 'environment' },
+        sim: { title: '4. Foto SIM', hint: 'Pastikan SIM terbaca dengan jelas.', mode: 'ktp', face: 'environment' },
+        ktp_penjamin: { title: '5. Foto KTP Penjamin', hint: 'Keluarga, Ayah, Ibu, Adik, atau Kakak.', mode: 'ktp', face: 'environment' },
+        domisili: { title: '6. Surat Domisili (Bila Ngontrak)', hint: 'Foto Surat RT/RW. Jika milik sendiri, foto kertas bertuliskan "Milik Sendiri".', mode: 'wide', face: 'environment' },
+        selfie_rumah: { title: '7. Selfie KTP di Depan Rumah', hint: 'Pegang KTP sejajar wajah, berdirilah dengan latar belakang bagian depan rumah.', mode: 'selfie', face: 'user' },
+        rumah_2m: { title: '8. Foto Rumah Jarak 2 Meter', hint: 'Mundur sekitar 2 meter, foto tampak depan rumah secara keseluruhan.', mode: 'wide', face: 'environment' },
+        kaleng_nomor: { title: '9. Foto Kaleng Nomor Rumah', hint: 'Foto nomor urut/kaleng rumah/plat alamat agar jelas.', mode: 'wide', face: 'environment' }
+    };
+
+    // State data
+    let tempPhotos = {};
+    let uploadFiles = { ssAkun: null, ssPendapatan: [] };
+    let extractedData = { nikPenyewa: '', nikIstri: '', noKk: '' };
+    
     let currentDocType = null;
     let currentStream = null;
     let currentStep = 1;
-    const totalSteps = 6;
-    const photoTypes = ['ktp','selfie','rumah','kaleng'];
-    const photoLabels = {
-        ktp: 'Foto KTP',
-        selfie: 'Selfie + KTP',
-        rumah: 'Foto Rumah Jarak 2M',
-        kaleng: 'Foto Kaleng No Rumah'
-    };
-    const photoHints = {
-        ktp: 'Pastikan tulisan di KTP terbaca jelas dan tidak buram. NIK akan dicoba dibaca otomatis.',
-        selfie: 'Pegang KTP sejajar wajah, pastikan wajah dan kartu terlihat jelas.',
-        rumah: 'Ambil foto rumah dari jarak sekitar 2 meter, tampak keseluruhan.',
-        kaleng: 'Ambil foto kaleng / plat nomor rumah dengan jelas.'
-    };
+    
+    // Total steps: 1(Data) + 2(Lokasi) + 3(Upload SS) + 9(Foto Kamera) = 12 steps
+    const totalSteps = 3 + photoTypes.length; 
 
+    // DOM Elements
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const overlay = document.getElementById('cameraOverlay');
@@ -374,28 +409,29 @@
     const cameraContainer = document.getElementById('cameraContainer');
     const previewWrap = document.getElementById('previewWrap');
     const previewImg = document.getElementById('previewImg');
+    const ocrGroup = document.getElementById('ocrGroup');
+    const ocrLabel = document.getElementById('ocrLabel');
+    const ocrValue = document.getElementById('ocrValue');
 
-    window.onload = () => fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => document.getElementById('userIp').value = d.ip).catch(e=>console.log(e));
+    // Dapatkan IP user saat load
+    window.onload = () => {
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(d => document.getElementById('userIp').value = d.ip)
+            .catch(e => console.log("Gagal ambil IP"));
+    };
 
     function stepName(n){
-        if(n===1) return 'Data Diri';
-        if(n===2) return 'Lokasi Rumah';
-        return photoLabels[photoTypes[n-3]];
+        if(n === 1) return 'Data Pribadi';
+        if(n === 2) return 'Lokasi Rumah';
+        if(n === 3) return 'Unggah SS';
+        return 'Foto ' + (n - 3) + '/9';
     }
 
     function updateProgress(n){
         document.getElementById('progressFill').style.width = (n/totalSteps*100) + '%';
         document.getElementById('progressLabel').innerText = `Langkah ${n} dari ${totalSteps}`;
         document.getElementById('progressName').innerText = stepName(n);
-    }
-
-    function updatePhotoDots(activeType){
-        photoTypes.forEach(t => {
-            const dot = document.getElementById('pd-' + t);
-            dot.classList.remove('filled','active');
-            if (tempFiles[t]) dot.classList.add('filled');
-            if (t === activeType) dot.classList.add('active');
-        });
     }
 
     function changeStep(n) {
@@ -406,11 +442,15 @@
             document.getElementById('step1').classList.add('active');
         } else if (n === 2) {
             document.getElementById('step2').classList.add('active');
+        } else if (n === 3) {
+            document.getElementById('stepUpload').classList.add('active');
         } else {
             document.getElementById('stepPhoto').classList.add('active');
-            loadPhotoStep(photoTypes[n - 3]);
+            const typeIndex = n - 4; // index untuk array photoTypes
+            loadPhotoStep(photoTypes[typeIndex]);
         }
         updateProgress(n);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function goNext() {
@@ -424,88 +464,178 @@
 
     function getLocation() {
         if (navigator.geolocation) {
+            document.getElementById('lokasi').value = "Sedang melacak...";
             navigator.geolocation.getCurrentPosition(
-                p => { document.getElementById('gpsAccuracy').value = p.coords.accuracy; document.getElementById('lokasi').value = `https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`; alert("GPS Terkunci!"); },
-                e => alert("Gagal GPS. Aktifkan lokasi."), { enableHighAccuracy: true }
+                p => { 
+                    document.getElementById('gpsAccuracy').value = p.coords.accuracy; 
+                    document.getElementById('lokasi').value = `https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`; 
+                    alert("GPS Berhasil Terkunci!"); 
+                },
+                e => {
+                    document.getElementById('lokasi').value = "";
+                    alert("Gagal mengunci GPS. Pastikan Izin Lokasi diaktifkan di browser Anda.");
+                }, 
+                { enableHighAccuracy: true, timeout: 10000 }
             );
+        } else {
+            alert("Browser Anda tidak mendukung fitur Lokasi.");
         }
     }
 
-    function overlayClassFor(type) {
-        if (type === 'ktp') return 'ktp-mode';
-        return 'wide-mode';
+    // Fungsi untuk kompresi file upload agar payload tidak terlalu besar
+    function resizeFileToBase64(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const cvs = document.createElement('canvas');
+                let width = img.width; let height = img.height;
+                const MAX_SIZE = 1000; // maksimal dimensi pixel
+                
+                if (width > height && width > MAX_SIZE) { 
+                    height *= MAX_SIZE / width; width = MAX_SIZE; 
+                } else if (height > MAX_SIZE) { 
+                    width *= MAX_SIZE / height; height = MAX_SIZE; 
+                }
+                
+                cvs.width = width; cvs.height = height;
+                const ctx = cvs.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                // Kompres kualitas jpeg ke 0.7
+                callback(cvs.toDataURL('image/jpeg', 0.7)); 
+            }
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
     }
 
-    function facingModeFor(type) {
-        return type === 'selfie' ? 'user' : 'environment';
-    }
+    document.getElementById('fileSsAkun').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(file) {
+            document.getElementById('statusSsAkun').innerText = "Memproses gambar...";
+            resizeFileToBase64(file, (base64) => {
+                uploadFiles.ssAkun = base64;
+                document.getElementById('statusSsAkun').innerText = "✓ Tersimpan (" + file.name + ")";
+            });
+        }
+    });
+
+    document.getElementById('fileSsPendapatan').addEventListener('change', function(e) {
+        uploadFiles.ssPendapatan = [];
+        const files = Array.from(e.target.files);
+        if(files.length > 0) {
+            document.getElementById('statusSsPendapatan').innerText = `Memproses ${files.length} gambar...`;
+            let processed = 0;
+            files.forEach(file => {
+                resizeFileToBase64(file, (base64) => {
+                    uploadFiles.ssPendapatan.push(base64);
+                    processed++;
+                    if(processed === files.length) {
+                        document.getElementById('statusSsPendapatan').innerText = `✓ ${files.length} File tersimpan siap kirim`;
+                    }
+                });
+            });
+        }
+    });
 
     function loadPhotoStep(type) {
         currentDocType = type;
-        document.getElementById('photoStepTitle').innerText = photoLabels[type];
-        document.getElementById('photoStepHint').innerText = photoHints[type];
+        const conf = photoConfig[type];
+        
+        document.getElementById('photoStepTitle').innerText = conf.title;
+        document.getElementById('photoStepHint').innerText = conf.hint;
+        
         const selfieOverlay = document.getElementById('selfieOverlay');
-        if (type === 'selfie') {
+        
+        if (conf.mode === 'selfie') {
             overlay.style.display = 'none';
             selfieOverlay.style.display = 'flex';
         } else {
             overlay.style.display = 'block';
-            overlay.className = 'overlay ' + overlayClassFor(type);
+            overlay.className = 'overlay ' + (conf.mode === 'ktp' ? 'ktp-mode' : 'wide-mode');
             selfieOverlay.style.display = 'none';
         }
-        updatePhotoDots(type);
 
-        document.getElementById('nikGroup').style.display = (type === 'ktp') ? 'block' : 'none';
+        setupOcrInputFor(type);
 
-        if (tempFiles[type]) {
+        if (tempPhotos[type]) {
             showPreview(type);
         } else {
-            showCameraForCapture(type);
+            showCameraForCapture(conf.face);
         }
     }
 
-    function showCameraForCapture(type) {
+    function setupOcrInputFor(type) {
+        if (type === 'ktp_penyewa') {
+            ocrGroup.style.display = 'block'; ocrLabel.innerText = 'NIK KTP Penyewa'; 
+            ocrValue.value = extractedData.nikPenyewa; setOcrStatus('', '');
+        } else if (type === 'ktp_istri') {
+            ocrGroup.style.display = 'block'; ocrLabel.innerText = 'NIK KTP Istri'; 
+            ocrValue.value = extractedData.nikIstri; setOcrStatus('', '');
+        } else if (type === 'kk') {
+            ocrGroup.style.display = 'block'; ocrLabel.innerText = 'Nomor Kartu Keluarga'; 
+            ocrValue.value = extractedData.noKk; setOcrStatus('', '');
+        } else {
+            ocrGroup.style.display = 'none';
+        }
+    }
+
+    // Update data saat user mengedit manual hasil OCR
+    ocrValue.addEventListener('input', (e) => {
+        if (currentDocType === 'ktp_penyewa') extractedData.nikPenyewa = e.target.value;
+        if (currentDocType === 'ktp_istri') extractedData.nikIstri = e.target.value;
+        if (currentDocType === 'kk') extractedData.noKk = e.target.value;
+    });
+
+    function showCameraForCapture(facingMode) {
         cameraContainer.style.display = 'block';
         previewWrap.style.display = 'none';
         btnCapture.style.display = 'block';
         btnRetake.style.display = 'none';
         btnNext.style.display = 'none';
-        startCamera(type);
+        startCamera(facingMode);
     }
 
-    async function startCamera(type) {
+    async function startCamera(facingMode) {
         if (currentStream) {
             currentStream.getTracks().forEach(t => t.stop());
             currentStream = null;
         }
         try {
             currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: facingModeFor(type) },
+                video: { facingMode: facingMode },
                 audio: false
             });
             video.srcObject = currentStream;
         } catch (err) {
-            alert("Akses kamera ditolak atau tidak tersedia.");
+            alert("Akses kamera ditolak atau tidak didukung di perangkat ini.");
         }
     }
 
     function capturePhotoTemporarily() {
         if (!currentDocType) return;
         const t = currentDocType;
+        
+        // Atur resolusi canvas sesuai stream video
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // efek kilat kamera sebagai tanda foto sedang diproses
+        // Efek Flash
         const flash = document.getElementById('cameraFlash');
         flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash');
 
-        tempFiles[t] = canvas.toDataURL('image/jpeg', 0.8);
+        // Simpan gambar dengan kualitas 0.75 untuk optimalisasi
+        tempPhotos[t] = canvas.toDataURL('image/jpeg', 0.75);
 
         if (currentStream) { currentStream.getTracks().forEach(tr => tr.stop()); currentStream = null; }
+        
         showPreview(t);
         showSaveToast();
 
-        if (t === 'ktp') runOcrNik(tempFiles.ktp);
+        // Jalankan OCR jika tipe dokumen didukung
+        if (['ktp_penyewa', 'ktp_istri', 'kk'].includes(t)) {
+            runOcrScan(tempPhotos[t], t);
+        }
     }
 
     function showSaveToast() {
@@ -515,63 +645,32 @@
         showSaveToast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
     }
 
-    function setOcrStatus(state, text) {
-        const el = document.getElementById('ocrStatus');
-        el.className = 'ocr-status' + (state ? ' ' + state : '');
-        document.getElementById('ocrStatusText').innerText = text;
-    }
-
-    function extractNik(rawText) {
-        // NIK KTP Indonesia selalu 16 digit angka berurutan
-        const cleaned = rawText.replace(/[^0-9]/g, ' ');
-        const matches = cleaned.match(/\d{16}/g);
-        if (matches && matches.length) return matches[0];
-        // fallback: gabungkan deretan panjang jika OCR memecah jadi beberapa kelompok
-        const compact = rawText.replace(/[^0-9]/g, '');
-        const longRun = compact.match(/\d{16}/);
-        return longRun ? longRun[0] : null;
-    }
-
-    async function runOcrNik(imageDataUrl) {
-        const nikInput = document.getElementById('nikValue');
-        setOcrStatus('reading', 'Membaca NIK dari foto KTP...');
-        try {
-            const result = await Tesseract.recognize(imageDataUrl, 'ind', { });
-            const nik = extractNik(result.data.text || '');
-            if (nik) {
-                nikInput.value = nik;
-                setOcrStatus('success', '✓ NIK terbaca otomatis, cek kembali sebelum lanjut.');
-            } else {
-                setOcrStatus('fail', 'NIK tidak terbaca jelas, silakan isi manual.');
-            }
-        } catch (err) {
-            setOcrStatus('fail', 'Gagal membaca otomatis, silakan isi NIK manual.');
-        }
-    }
-
     function retakePhoto() {
         const t = currentDocType;
-        tempFiles[t] = null;
+        tempPhotos[t] = null;
         document.getElementById('saveToast').classList.remove('show');
-        if (t === 'ktp') {
-            document.getElementById('nikValue').value = '';
+        
+        if (['ktp_penyewa', 'ktp_istri', 'kk'].includes(t)) {
+            ocrValue.value = '';
+            // Reset state
+            if(t === 'ktp_penyewa') extractedData.nikPenyewa = '';
+            if(t === 'ktp_istri') extractedData.nikIstri = '';
+            if(t === 'kk') extractedData.noKk = '';
             setOcrStatus('', '');
         }
-        showCameraForCapture(t);
-        updatePhotoDots(t);
+        showCameraForCapture(photoConfig[t].face);
     }
 
     function showPreview(type) {
         cameraContainer.style.display = 'none';
         previewWrap.style.display = 'block';
-        previewImg.src = tempFiles[type];
+        previewImg.src = tempPhotos[type];
         btnCapture.style.display = 'none';
         btnRetake.style.display = 'block';
         btnNext.style.display = 'block';
-        updatePhotoDots(type);
 
         if (currentStep === totalSteps) {
-            btnNext.innerText = 'KIRIM PENDAFTARAN';
+            btnNext.innerText = 'KIRIM SEMUA DATA 🚀';
             btnNext.onclick = submitFormKolektif;
         } else {
             btnNext.innerText = 'Lanjut ➡️';
@@ -579,22 +678,99 @@
         }
     }
 
-    function submitFormKolektif() {
-        const p = {
-            nama: document.getElementById('nama').value, region: document.getElementById('region').value,
-            lokasi: document.getElementById('lokasi').value, sosmed: document.getElementById('sosmed').value,
-            kontakDarurat: document.getElementById('kontakDarurat').value, gpsAccuracy: document.getElementById('gpsAccuracy').value,
-            userIp: document.getElementById('userIp').value, nik: document.getElementById('nikValue').value, files: tempFiles
-        };
-        if (!p.nama || !p.lokasi.includes("http") || !tempFiles.ktp || !tempFiles.selfie) return alert("Lengkapi data dan foto utama!");
+    function setOcrStatus(state, text) {
+        const el = document.getElementById('ocrStatus');
+        el.className = 'ocr-status' + (state ? ' ' + state : '');
+        document.getElementById('ocrStatusText').innerText = text;
+    }
 
-        document.getElementById('statusMessage').innerText = "Mengirim...";
+    function extract16Digits(rawText) {
+        // NIK dan No KK selalu 16 digit
+        const cleaned = rawText.replace(/[^0-9]/g, ' ');
+        const matches = cleaned.match(/\d{16}/g);
+        if (matches && matches.length) return matches[0];
+        
+        const compact = rawText.replace(/[^0-9]/g, '');
+        const longRun = compact.match(/\d{16}/);
+        return longRun ? longRun[0] : null;
+    }
+
+    async function runOcrScan(imageDataUrl, type) {
+        setOcrStatus('reading', 'Mengekstrak nomor otomatis...');
+        try {
+            const result = await Tesseract.recognize(imageDataUrl, 'ind', { });
+            const numberFound = extract16Digits(result.data.text || '');
+            
+            if (numberFound) {
+                ocrValue.value = numberFound;
+                // Simpan ke state
+                if (type === 'ktp_penyewa') extractedData.nikPenyewa = numberFound;
+                if (type === 'ktp_istri') extractedData.nikIstri = numberFound;
+                if (type === 'kk') extractedData.noKk = numberFound;
+                
+                setOcrStatus('success', '✓ Nomor terbaca, cek kembali ketepatannya.');
+            } else {
+                setOcrStatus('fail', 'Tidak terbaca jelas. Harap ketik nomor secara manual.');
+            }
+        } catch (err) {
+            setOcrStatus('fail', 'Gagal memproses gambar, silakan isi manual.');
+        }
+    }
+
+    function submitFormKolektif() {
+        // Kumpulkan semua data form teks
+        const payload = {
+            nama: document.getElementById('nama').value,
+            noWa: document.getElementById('noWa').value,
+            emailOjol: document.getElementById('emailOjol').value,
+            sosmed: document.getElementById('sosmed').value,
+            kontakDarurat: document.getElementById('kontakDarurat').value,
+            region: document.getElementById('region').value,
+            
+            lokasi: document.getElementById('lokasi').value,
+            gpsAccuracy: document.getElementById('gpsAccuracy').value,
+            userIp: document.getElementById('userIp').value,
+            
+            // Data hasil OCR / Manual input
+            nikPenyewa: extractedData.nikPenyewa,
+            nikIstri: extractedData.nikIstri,
+            noKk: extractedData.noKk,
+            
+            // Lampiran Upload (SS)
+            ssAkun: uploadFiles.ssAkun,
+            ssPendapatan: uploadFiles.ssPendapatan,
+            
+            // Kumpulan 9 Foto Kamera
+            fotoData: tempPhotos
+        };
+
+        // Validasi Sederhana
+        if (!payload.nama || !payload.noWa) return alert("Nama Lengkap dan No WA wajib diisi!");
+        if (!payload.lokasi.includes("http")) return alert("Harap kunci GPS Lokasi Anda di Langkah 2!");
+        if (!tempPhotos.ktp_penyewa || !tempPhotos.selfie_rumah) return alert("Mohon lengkapi minimal Foto KTP Penyewa dan Selfie depan rumah!");
+
+        document.getElementById('statusMessage').style.color = "var(--gold)";
+        document.getElementById('statusMessage').innerText = "Sedang mengirim data, mohon tunggu (Bisa memakan waktu 1-2 Menit karena banyak foto)...";
         btnNext.disabled = true;
-        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(p) })
-        .then(r => r.json()).then(res => {
-            document.getElementById('statusMessage').innerText = res.message;
+        btnRetake.disabled = true;
+
+        fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('statusMessage').style.color = "var(--green)";
+            document.getElementById('statusMessage').innerText = "Pendaftaran Berhasil Dikirim! " + (res.message || "");
             if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-        }).catch(e => document.getElementById('statusMessage').innerText = "Gagal Jaringan.");
+            btnNext.style.display = 'none';
+        })
+        .catch(e => {
+            document.getElementById('statusMessage').style.color = "var(--red)";
+            document.getElementById('statusMessage').innerText = "Gagal Jaringan atau File Terlalu Besar. Coba gunakan koneksi WiFi.";
+            btnNext.disabled = false;
+            btnRetake.disabled = false;
+        });
     }
 </script>
 </body>

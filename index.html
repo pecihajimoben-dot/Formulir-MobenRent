@@ -1,176 +1,386 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulir Sewa Moben</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 15px; background: #f4f4f4; margin: 0; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .step { display: none; }
-        .step.active { display: block; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formulir Sewa Moben</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --navy:#16213E;
+        --navy-soft:#232F52;
+        --gold:#E8A33D;
+        --gold-soft:#FBEBD2;
+        --cream:#F6F4EF;
+        --line:#E4E0D8;
+        --ink:#20263A;
+        --muted:#7A8093;
+        --green:#2F9E58;
+        --red:#D9534F;
+        --shadow: 0 12px 30px -12px rgba(22,33,62,0.25);
+    }
 
-        h3.photo-title { margin-top: 0; color: #333; }
-        p.hint { color: #777; font-size: 13px; margin-top: -8px; margin-bottom: 12px; }
+    *{box-sizing:border-box;}
 
-        .camera-container { position: relative; width: 100%; max-width: 400px; margin: 10px auto; overflow: hidden; border-radius: 8px; background: #000; }
-        video { width: 100%; height: auto; display: block; }
+    body{
+        font-family:'Inter',sans-serif;
+        background: linear-gradient(180deg,#EFEAE0 0%, var(--cream) 45%);
+        margin:0;
+        padding:24px 14px 48px;
+        color:var(--ink);
+        min-height:100vh;
+    }
 
-        /* Overlay bingkai foto - kotak "jendela" ditengah, area luar digelapkan */
-        .overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border: 3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
-            box-sizing: border-box; pointer-events: none; transition: 0.2s;
-        }
-        /* KTP asli berbentuk landscape (lebih lebar dari tinggi), rasio kartu identitas ~1.586:1 */
-        .overlay.ktp-mode { width: 82%; aspect-ratio: 1.586 / 1; border-radius: 10px; }
-        /* Selfie + KTP: bingkai potrait agar wajah & kartu KTP di dada terlihat */
-        .overlay.selfie-mode { width: 68%; aspect-ratio: 3 / 4; border-radius: 16px; }
-        /* Rumah / kaleng nomor rumah: bingkai lebar biasa */
-        .overlay.wide-mode { width: 92%; aspect-ratio: 4 / 3; border-radius: 6px; }
+    .container{
+        max-width:460px;
+        margin:auto;
+        background:#fff;
+        border-radius:20px;
+        box-shadow:var(--shadow);
+        overflow:hidden;
+        border:1px solid rgba(22,33,62,0.06);
+    }
 
-        button { padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-        button.btn-secondary { background: #007bff; }
-        button.btn-warning { background: #ffc107; color: black; }
-        button.btn-outline { background: #fff; color: #333; border: 2px solid #ccc; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        canvas { display: none; }
+    .header{
+        background: linear-gradient(135deg, var(--navy) 0%, var(--navy-soft) 100%);
+        padding:26px 24px 22px;
+        position:relative;
+        overflow:hidden;
+    }
+    .header::after{
+        content:"";
+        position:absolute; right:-40px; top:-40px;
+        width:140px; height:140px; border-radius:50%;
+        background: rgba(232,163,61,0.18);
+    }
+    .header h2{
+        margin:0 0 4px;
+        font-family:'Plus Jakarta Sans',sans-serif;
+        font-weight:800;
+        font-size:22px;
+        color:#fff;
+        letter-spacing:-0.02em;
+    }
+    .header p{
+        margin:0;
+        color:rgba(255,255,255,0.68);
+        font-size:13px;
+    }
 
-        /* Indikator sedang menyimpan foto */
-        .save-indicator {
-            display: none; text-align: center; padding: 30px 10px; margin: 10px auto; max-width: 400px;
-            background: #fff3cd; border: 1px solid #ffe69c; border-radius: 8px; color: #664d03; font-weight: bold;
-        }
-        .save-indicator .spinner {
-            display: inline-block; width: 16px; height: 16px; border: 3px solid #664d03;
-            border-top-color: transparent; border-radius: 50%; margin-right: 8px;
-            animation: spin 0.8s linear infinite; vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+    /* progress bar tunggal */
+    .progress-wrap{ margin-top:20px; position:relative; z-index:1; }
+    .progress-track{
+        width:100%; height:6px; border-radius:6px;
+        background: rgba(255,255,255,0.16); overflow:hidden;
+    }
+    .progress-fill{
+        height:100%; width:16.6%; border-radius:6px;
+        background: var(--gold); transition:.3s ease;
+    }
+    .progress-label{
+        margin-top:8px; font-size:12px; font-weight:600;
+        color:rgba(255,255,255,0.75);
+        display:flex; justify-content:space-between;
+    }
 
-        .thumb-area { text-align: center; margin: 10px 0; }
-        .preview-img { max-width: 100%; border-radius: 8px; border: 2px solid #28a745; }
-        .save-ok { color: #28a745; font-weight: bold; margin-top: 6px; }
+    .body-pad{ padding:24px; }
 
-        .progress-text { text-align:center; color:#999; font-size:13px; margin-bottom: 10px; }
-    </style>
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn .35s ease; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+    .step-title{
+        font-family:'Plus Jakarta Sans',sans-serif;
+        font-weight:700; font-size:16px; margin:0 0 4px;
+        color:var(--navy);
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+        display: block; font-weight: 600; font-size:13px;
+        margin-bottom:6px; color:var(--navy);
+    }
+    .form-group input, .form-group select {
+        width: 100%; padding: 12px 14px; box-sizing: border-box;
+        border: 1.5px solid var(--line); border-radius: 10px;
+        font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
+        background:#FBFAF7;
+        transition:.15s;
+    }
+    .form-group input:focus, .form-group select:focus{
+        outline:none; border-color:var(--gold); background:#fff;
+        box-shadow:0 0 0 3px rgba(232,163,61,0.18);
+    }
+    .form-group input[readonly]{ background:#F0EEE8; color:var(--muted); }
+
+    button {
+        padding: 13px; border: none; border-radius: 10px; cursor: pointer;
+        width: 100%; font-size: 14.5px; font-weight: 700;
+        font-family:'Plus Jakarta Sans',sans-serif;
+        margin-bottom: 10px; transition:.15s;
+        letter-spacing:-0.01em;
+    }
+    button:active{ transform: scale(0.98); }
+
+    .btn-primary{ background: var(--navy); color:#fff; }
+    .btn-primary:hover{ background:#0E1830; }
+    .btn-secondary { background: var(--gold); color: var(--navy); }
+    .btn-secondary:hover{ filter:brightness(1.04); }
+    .btn-ghost{ background:transparent; color:var(--muted); border:1.5px solid var(--line); }
+    .btn-warning { background: var(--gold-soft); color: var(--navy); border:1.5px solid var(--gold); }
+
+    .row-btns{ display:flex; gap:10px; }
+    .row-btns button{ margin-bottom:0; }
+
+    .hint{ font-size:12px; color:var(--muted); margin:0 0 16px; line-height:1.5; }
+
+    .camera-container {
+        position: relative; width: 100%; max-width: 400px;
+        margin: 6px auto 16px; overflow: hidden; border-radius: 14px;
+        background: #000; box-shadow: var(--shadow);
+    }
+    video { width: 100%; height: auto; display: block; }
+
+    .overlay {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        border: 3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        box-sizing: border-box; pointer-events: none; transition: 0.2s;
+    }
+    .overlay.ktp-mode { width: 82%; aspect-ratio: 1.586 / 1; border-radius: 10px; }
+    .overlay.wide-mode { width: 92%; aspect-ratio: 4 / 3; border-radius: 6px; }
+
+    /* frame khusus Selfie + KTP: wajah di atas, kartu KTP di bawah */
+    .selfie-overlay-group{
+        position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+        width:74%; display:flex; flex-direction:column; align-items:center; gap:10px;
+        pointer-events:none;
+    }
+    .selfie-overlay-group .guide-label{
+        color:#fff; font-size:11px; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,0.6);
+        margin-bottom:-4px; font-family:'Plus Jakarta Sans',sans-serif;
+    }
+    .selfie-overlay-group .face-guide{
+        width:52%; aspect-ratio: 3 / 3.6; border-radius: 50% / 44%;
+        border:3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        box-sizing:border-box;
+    }
+    .selfie-overlay-group .card-guide{
+        width:100%; aspect-ratio: 1.586 / 1; border-radius: 10px;
+        border:3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+        box-sizing:border-box;
+    }
+
+    .camera-flash{
+        position:absolute; inset:0; background:#fff; opacity:0;
+        pointer-events:none; z-index:5;
+    }
+    .camera-flash.flash{ animation: flashPop .45s ease; }
+    @keyframes flashPop{ 0%{opacity:0.85;} 100%{opacity:0;} }
+
+    canvas { display: none; }
+
+    .preview-wrap{
+        margin: 6px auto 16px; border-radius:14px; overflow:hidden;
+        box-shadow: var(--shadow); max-width:400px; position:relative;
+    }
+    .preview-wrap img{ width:100%; display:block; }
+    .preview-badge{
+        position:absolute; top:10px; right:10px;
+        background: var(--green); color:#fff; font-size:12px; font-weight:700;
+        padding:5px 10px; border-radius:20px;
+        font-family:'Plus Jakarta Sans',sans-serif;
+        display:flex; align-items:center; gap:4px;
+    }
+
+    .photo-dots{ display:flex; gap:6px; margin:2px 0 14px; }
+    .photo-dots .pd{
+        flex:1; height:4px; border-radius:4px; background:var(--line);
+    }
+    .photo-dots .pd.filled{ background:var(--green); }
+    .photo-dots .pd.active{ background:var(--navy); }
+
+    .save-toast{
+        position:absolute; bottom:14px; left:50%; transform:translate(-50%,6px);
+        background: rgba(47,158,88,0.96); color:#fff; font-size:12.5px; font-weight:700;
+        padding:7px 16px; border-radius:20px; opacity:0; transition:.25s ease;
+        font-family:'Plus Jakarta Sans',sans-serif; pointer-events:none; white-space:nowrap;
+        display:flex; align-items:center; gap:5px; box-shadow:0 6px 16px -6px rgba(0,0,0,0.35);
+    }
+    .save-toast.show{ opacity:1; transform:translate(-50%,0); }
+
+    #statusMessage {
+        text-align: center; font-weight: 600; font-size:13.5px;
+        margin-top:10px; color:var(--navy); min-height:18px;
+    }
+</style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align:center; color: #28a745;">Pendaftaran Moben</h2>
-
-    <div id="step1" class="step active">
-        <div class="form-group"><label>Nama Lengkap:</label><input type="text" id="nama"></div>
-        <div class="form-group"><label>Akun Sosmed (IG/FB):</label><input type="text" id="sosmed"></div>
-        <div class="form-group"><label>Kontak Darurat:</label><input type="text" id="kontakDarurat"></div>
-        <div class="form-group"><label>Wilayah:</label>
-            <select id="region">
-                <option value="Kota Bekasi">Kota Bekasi</option>
-                <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
-            </select>
+    <div class="header">
+        <h2>Pendaftaran Moben</h2>
+        <p>Isi data, kunci lokasi, lalu ambil foto verifikasi</p>
+        <div class="progress-wrap">
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-label">
+                <span id="progressLabel">Langkah 1 dari 6</span>
+                <span id="progressName">Data Diri</span>
+            </div>
         </div>
-        <button class="btn-secondary" onclick="changeStep('step2')">Lanjut ➡️</button>
     </div>
 
-    <div id="step2" class="step">
-        <div class="form-group">
-            <label>Lokasi GPS Rumah Asli:</label>
-            <button class="btn-warning" onclick="getLocation()">📌 Kunci GPS</button>
-            <input type="text" id="lokasi" readonly style="background: #e9ecef;">
-            <input type="hidden" id="gpsAccuracy"><input type="hidden" id="userIp">
+    <div class="body-pad">
+
+        <div id="step1" class="step active">
+            <p class="step-title">Data Diri</p>
+            <div class="form-group"><label>Nama Lengkap</label><input type="text" id="nama" placeholder="Sesuai KTP"></div>
+            <div class="form-group"><label>Akun Sosmed (IG/FB)</label><input type="text" id="sosmed" placeholder="@username"></div>
+            <div class="form-group"><label>Kontak Darurat</label><input type="text" id="kontakDarurat" placeholder="Nama & nomor HP"></div>
+            <div class="form-group"><label>Wilayah</label>
+                <select id="region">
+                    <option value="Kota Bekasi">Kota Bekasi</option>
+                    <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
+                </select>
+            </div>
+            <button class="btn-secondary" onclick="changeStep(2)">Lanjut ➡️</button>
         </div>
-        <button class="btn-secondary" onclick="startPhotoFlow()">Lanjut ke Kamera ➡️</button>
-    </div>
 
-    <!-- Halaman 1: Foto KTP -->
-    <div id="step_ktp" class="step">
-        <div class="progress-text">Foto 1 dari 4</div>
-        <h3 class="photo-title">1. Foto KTP</h3>
-        <p class="hint">Posisikan KTP mendatar (landscape) di dalam bingkai, pastikan tulisan terbaca jelas.</p>
-        <div id="thumb-ktp" class="thumb-area"></div>
-    </div>
+        <div id="step2" class="step">
+            <p class="step-title">Lokasi Rumah</p>
+            <div class="form-group">
+                <label>Lokasi GPS Rumah Asli</label>
+                <button class="btn-warning" onclick="getLocation()">📌 Kunci GPS</button>
+                <input type="text" id="lokasi" readonly placeholder="Belum dikunci">
+                <input type="hidden" id="gpsAccuracy"><input type="hidden" id="userIp">
+            </div>
+            <p class="hint">Pastikan GPS aktif dan akurat agar lokasi rumah tercatat dengan benar.</p>
+            <div class="row-btns">
+                <button class="btn-ghost" onclick="goPrev()">⬅️ Kembali</button>
+                <button class="btn-secondary" onclick="changeStep(3)">Lanjut ke Kamera ➡️</button>
+            </div>
+        </div>
 
-    <!-- Halaman 2: Selfie + KTP -->
-    <div id="step_selfie" class="step">
-        <div class="progress-text">Foto 2 dari 4</div>
-        <h3 class="photo-title">2. Selfie + KTP</h3>
-        <p class="hint">Kamera depan aktif otomatis. Pegang KTP di dada, wajah dan KTP harus terlihat jelas.</p>
-        <div id="thumb-selfie" class="thumb-area"></div>
-    </div>
+        <!-- satu template halaman foto, dipakai bergantian untuk KTP / Selfie / Rumah / Kaleng -->
+        <div id="stepPhoto" class="step">
+            <p class="step-title" id="photoStepTitle">Foto KTP</p>
+            <p class="hint" id="photoStepHint">Pastikan tulisan di KTP terbaca jelas.</p>
+            <div class="photo-dots" id="photoDots">
+                <div class="pd" id="pd-ktp"></div>
+                <div class="pd" id="pd-selfie"></div>
+                <div class="pd" id="pd-rumah"></div>
+                <div class="pd" id="pd-kaleng"></div>
+            </div>
 
-    <!-- Halaman 3: Foto Rumah -->
-    <div id="step_rumah" class="step">
-        <div class="progress-text">Foto 3 dari 4</div>
-        <h3 class="photo-title">3. Foto Rumah Jarak 2M</h3>
-        <p class="hint">Ambil foto rumah dari jarak kurang lebih 2 meter, pastikan tampak depan rumah masuk bingkai.</p>
-        <div id="thumb-rumah" class="thumb-area"></div>
-    </div>
+            <div class="camera-container" id="cameraContainer">
+                <video id="video" autoplay playsinline muted></video>
+                <div id="cameraOverlay" class="overlay"></div>
+                <div id="selfieOverlay" class="selfie-overlay-group" style="display:none;">
+                    <span class="guide-label">👤 Wajah</span>
+                    <div class="face-guide"></div>
+                    <div class="card-guide"></div>
+                    <span class="guide-label" style="margin-top:-6px;">🪪 KTP</span>
+                </div>
+                <div class="camera-flash" id="cameraFlash"></div>
+            </div>
+            <canvas id="canvas"></canvas>
 
-    <!-- Halaman 4: Foto Kaleng No Rumah -->
-    <div id="step_kaleng" class="step">
-        <div class="progress-text">Foto 4 dari 4</div>
-        <h3 class="photo-title">4. Foto Kaleng No Rumah</h3>
-        <p class="hint">Ambil foto papan/kaleng nomor rumah dengan jelas.</p>
-        <div id="thumb-kaleng" class="thumb-area"></div>
-    </div>
+            <div class="preview-wrap" id="previewWrap" style="display:none;">
+                <img id="previewImg" alt="Hasil foto">
+                <span class="preview-badge">✓ Siap</span>
+                <div class="save-toast" id="saveToast">✅ Foto tersimpan</div>
+            </div>
 
-    <!-- Area kamera & kontrol bersama, dipakai bergantian untuk 4 halaman di atas -->
-    <div class="camera-container" id="cameraContainer" style="display:none;">
-        <video id="video" autoplay playsinline muted></video>
-        <div id="cameraOverlay" class="overlay"></div>
-    </div>
-    <canvas id="canvas"></canvas>
+            <button id="btnCapture" class="btn-primary" onclick="capturePhotoTemporarily()">📸 Ambil Foto</button>
+            <button id="btnRetake" class="btn-ghost" onclick="retakePhoto()" style="display:none;">🔄 Ambil Ulang</button>
 
-    <div id="saveIndicator" class="save-indicator"><span class="spinner"></span>Menyimpan foto...</div>
+            <div class="row-btns">
+                <button class="btn-ghost" onclick="goPrev()">⬅️ Kembali</button>
+                <button id="btnNext" class="btn-secondary" onclick="goNext()" style="display:none;">Lanjut ➡️</button>
+            </div>
+            <div id="statusMessage"></div>
+        </div>
 
-    <div id="captureControls" style="display:none;">
-        <button id="btnCapture" onclick="capturePhotoTemporarily()">📸 Ambil Foto</button>
-        <button id="btnRetake" class="btn-outline" onclick="retakePhoto()" style="display:none;">🔄 Ambil Ulang</button>
-        <button id="btnNext" class="btn-secondary" onclick="goNext()" style="display:none;" disabled>Lanjut ➡️</button>
-    </div>
-
-    <!-- Halaman terakhir: kirim pendaftaran -->
-    <div id="step_submit" class="step">
-        <h3 class="photo-title">Semua Foto Sudah Lengkap</h3>
-        <p class="hint">Periksa kembali data Anda, lalu kirim pendaftaran.</p>
-        <button id="btnSubmitAll" onclick="submitFormKolektif()">KIRIM PENDAFTARAN</button>
-        <div id="statusMessage" style="text-align:center; font-weight:bold;"></div>
     </div>
 </div>
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzJCp-Vf4B4LmkqGVC6M6sQrxceXTkHRmgSqgjbNhheIBdICaRuY07LZkIG2uhDC6yW/exec";
     let tempFiles = { ktp: null, selfie: null, rumah: null, kaleng: null };
+    let currentDocType = null;
     let currentStream = null;
+    let currentStep = 1;
+    const totalSteps = 6;
+    const photoTypes = ['ktp','selfie','rumah','kaleng'];
+    const photoLabels = {
+        ktp: 'Foto KTP',
+        selfie: 'Selfie + KTP',
+        rumah: 'Foto Rumah Jarak 2M',
+        kaleng: 'Foto Kaleng No Rumah'
+    };
+    const photoHints = {
+        ktp: 'Pastikan tulisan di KTP terbaca jelas dan tidak buram.',
+        selfie: 'Pegang KTP sejajar wajah, pastikan wajah dan kartu terlihat jelas.',
+        rumah: 'Ambil foto rumah dari jarak sekitar 2 meter, tampak keseluruhan.',
+        kaleng: 'Ambil foto kaleng / plat nomor rumah dengan jelas.'
+    };
 
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const overlay = document.getElementById('cameraOverlay');
-    const cameraContainer = document.getElementById('cameraContainer');
-    const captureControls = document.getElementById('captureControls');
     const btnCapture = document.getElementById('btnCapture');
     const btnRetake = document.getElementById('btnRetake');
     const btnNext = document.getElementById('btnNext');
-    const saveIndicator = document.getElementById('saveIndicator');
-
-    // Urutan halaman foto
-    const photoFlow = [
-        { step: 'step_ktp',    type: 'ktp' },
-        { step: 'step_selfie', type: 'selfie' },
-        { step: 'step_rumah',  type: 'rumah' },
-        { step: 'step_kaleng', type: 'kaleng' }
-    ];
-    let flowIndex = 0;
+    const cameraContainer = document.getElementById('cameraContainer');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewImg = document.getElementById('previewImg');
 
     window.onload = () => fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => document.getElementById('userIp').value = d.ip).catch(e=>console.log(e));
 
-    function changeStep(id) {
+    function stepName(n){
+        if(n===1) return 'Data Diri';
+        if(n===2) return 'Lokasi Rumah';
+        return photoLabels[photoTypes[n-3]];
+    }
+
+    function updateProgress(n){
+        document.getElementById('progressFill').style.width = (n/totalSteps*100) + '%';
+        document.getElementById('progressLabel').innerText = `Langkah ${n} dari ${totalSteps}`;
+        document.getElementById('progressName').innerText = stepName(n);
+    }
+
+    function updatePhotoDots(activeType){
+        photoTypes.forEach(t => {
+            const dot = document.getElementById('pd-' + t);
+            dot.classList.remove('filled','active');
+            if (tempFiles[t]) dot.classList.add('filled');
+            if (t === activeType) dot.classList.add('active');
+        });
+    }
+
+    function changeStep(n) {
+        currentStep = n;
         document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+
+        if (n === 1) {
+            document.getElementById('step1').classList.add('active');
+        } else if (n === 2) {
+            document.getElementById('step2').classList.add('active');
+        } else {
+            document.getElementById('stepPhoto').classList.add('active');
+            loadPhotoStep(photoTypes[n - 3]);
+        }
+        updateProgress(n);
+    }
+
+    function goNext() {
+        if (currentStep < totalSteps) changeStep(currentStep + 1);
+    }
+
+    function goPrev() {
+        if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+        if (currentStep > 1) changeStep(currentStep - 1);
     }
 
     function getLocation() {
@@ -182,37 +392,47 @@
         }
     }
 
-    // Bingkai per jenis foto
     function overlayClassFor(type) {
         if (type === 'ktp') return 'ktp-mode';
-        if (type === 'selfie') return 'selfie-mode';
-        return 'wide-mode'; // rumah & kaleng
+        return 'wide-mode';
     }
 
-    // Kamera depan hanya untuk selfie, sisanya kamera belakang
     function facingModeFor(type) {
         return type === 'selfie' ? 'user' : 'environment';
     }
 
-    // Reset tampilan halaman foto (kamera hidup, tombol ambil foto muncul)
-    function prepareStepUI(type) {
+    function loadPhotoStep(type) {
+        currentDocType = type;
+        document.getElementById('photoStepTitle').innerText = photoLabels[type];
+        document.getElementById('photoStepHint').innerText = photoHints[type];
+        const selfieOverlay = document.getElementById('selfieOverlay');
+        if (type === 'selfie') {
+            overlay.style.display = 'none';
+            selfieOverlay.style.display = 'flex';
+        } else {
+            overlay.style.display = 'block';
+            overlay.className = 'overlay ' + overlayClassFor(type);
+            selfieOverlay.style.display = 'none';
+        }
+        updatePhotoDots(type);
+
+        if (tempFiles[type]) {
+            showPreview(type);
+        } else {
+            showCameraForCapture(type);
+        }
+    }
+
+    function showCameraForCapture(type) {
         cameraContainer.style.display = 'block';
-        captureControls.style.display = 'block';
-        video.style.display = 'block';
-        overlay.style.display = 'block';
+        previewWrap.style.display = 'none';
         btnCapture.style.display = 'block';
         btnRetake.style.display = 'none';
         btnNext.style.display = 'none';
-        btnNext.disabled = true;
-        saveIndicator.style.display = 'none';
-
-        const thumb = document.getElementById('thumb-' + type);
-        if (thumb) thumb.innerHTML = '';
+        startCamera(type);
     }
 
-    async function openCamera(type) {
-        overlay.className = 'overlay ' + overlayClassFor(type);
-
+    async function startCamera(type) {
         if (currentStream) {
             currentStream.getTracks().forEach(t => t.stop());
             currentStream = null;
@@ -228,68 +448,54 @@
         }
     }
 
-    function startPhotoFlow() {
-        flowIndex = 0;
-        const first = photoFlow[flowIndex];
-        changeStep(first.step);
-        prepareStepUI(first.type);
-        openCamera(first.type);
-    }
-
-    function goNext() {
-        flowIndex++;
-        if (flowIndex < photoFlow.length) {
-            const next = photoFlow[flowIndex];
-            changeStep(next.step);
-            prepareStepUI(next.type);
-            openCamera(next.type);
-        } else {
-            if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
-            cameraContainer.style.display = 'none';
-            captureControls.style.display = 'none';
-            changeStep('step_submit');
-        }
-    }
-
-    // Ambil foto + tampilkan indikator "sedang menyimpan" sebelum konfirmasi tersimpan
     function capturePhotoTemporarily() {
-        const t = photoFlow[flowIndex].type;
+        if (!currentDocType) return;
+        const t = currentDocType;
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-        // Tampilkan indikator menyimpan, sembunyikan kamera sementara
-        btnCapture.style.display = 'none';
-        video.style.display = 'none';
-        overlay.style.display = 'none';
-        saveIndicator.style.display = 'block';
+        // efek kilat kamera sebagai tanda foto sedang diproses
+        const flash = document.getElementById('cameraFlash');
+        flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash');
 
-        setTimeout(() => {
-            tempFiles[t] = dataUrl;
-            saveIndicator.style.display = 'none';
+        tempFiles[t] = canvas.toDataURL('image/jpeg', 0.8);
 
-            const thumb = document.getElementById('thumb-' + t);
-            thumb.innerHTML = '<img src="' + dataUrl + '" class="preview-img"><div class="save-ok">✓ Foto berhasil disimpan</div>';
+        if (currentStream) { currentStream.getTracks().forEach(tr => tr.stop()); currentStream = null; }
+        showPreview(t);
+        showSaveToast();
+    }
 
-            btnRetake.style.display = 'block';
-            btnNext.style.display = 'block';
-            btnNext.disabled = false;
-        }, 700);
+    function showSaveToast() {
+        const toast = document.getElementById('saveToast');
+        toast.classList.add('show');
+        clearTimeout(showSaveToast._timer);
+        showSaveToast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
     }
 
     function retakePhoto() {
-        const t = photoFlow[flowIndex].type;
+        const t = currentDocType;
         tempFiles[t] = null;
-        const thumb = document.getElementById('thumb-' + t);
-        if (thumb) thumb.innerHTML = '';
+        document.getElementById('saveToast').classList.remove('show');
+        showCameraForCapture(t);
+        updatePhotoDots(t);
+    }
 
-        cameraContainer.style.display = 'block';
-        video.style.display = 'block';
-        overlay.style.display = 'block';
-        btnCapture.style.display = 'block';
-        btnRetake.style.display = 'none';
-        btnNext.style.display = 'none';
-        btnNext.disabled = true;
+    function showPreview(type) {
+        cameraContainer.style.display = 'none';
+        previewWrap.style.display = 'block';
+        previewImg.src = tempFiles[type];
+        btnCapture.style.display = 'none';
+        btnRetake.style.display = 'block';
+        btnNext.style.display = 'block';
+        updatePhotoDots(type);
+
+        if (currentStep === totalSteps) {
+            btnNext.innerText = 'KIRIM PENDAFTARAN';
+            btnNext.onclick = submitFormKolektif;
+        } else {
+            btnNext.innerText = 'Lanjut ➡️';
+            btnNext.onclick = goNext;
+        }
     }
 
     function submitFormKolektif() {
@@ -302,10 +508,11 @@
         if (!p.nama || !p.lokasi.includes("http") || !tempFiles.ktp || !tempFiles.selfie) return alert("Lengkapi data dan foto utama!");
 
         document.getElementById('statusMessage').innerText = "Mengirim...";
-        document.getElementById('btnSubmitAll').disabled = true;
+        btnNext.disabled = true;
         fetch(GAS_URL, { method: 'POST', body: JSON.stringify(p) })
         .then(r => r.json()).then(res => {
             document.getElementById('statusMessage').innerText = res.message;
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
         }).catch(e => document.getElementById('statusMessage').innerText = "Gagal Jaringan.");
     }
 </script>

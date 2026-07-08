@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulir Sewa Moben</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 15px; background: #f4f4f4; margin: 0; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .step { display: none; }
+        .step.active { display: block; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+        .camera-container { position: relative; width: 100%; max-width: 400px; margin: 15px auto; overflow: hidden; border-radius: 8px; background: #000; }
+        video { width: 100%; height: auto; display: block; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 40px solid rgba(0, 0, 0, 0.5); box-sizing: border-box; transition: 0.3s; }
+        .overlay.ktp-mode { border-width: 60px 30px; border-radius: 10px; }
+        .overlay.selfie-mode { border-width: 40px 60px; border-radius: 50%; }
+        .overlay.wide-mode { border-width: 15px 15px; border-radius: 0; }
+        button { padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+        button.btn-secondary { background: #007bff; }
+        button.btn-warning { background: #ffc107; color: black; }
+        canvas { display: none; }
+        .status-badge { display: inline-block; padding: 5px; background: #ddd; font-size: 12px; border-radius: 3px; font-weight: bold; }
+        .status-badge.ready { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center; color: #28a745;">Pendaftaran Moben</h2>
+    
+    <div id="step1" class="step active">
+        <div class="form-group"><label>Nama Lengkap:</label><input type="text" id="nama"></div>
+        <div class="form-group"><label>Akun Sosmed (IG/FB):</label><input type="text" id="sosmed"></div>
+        <div class="form-group"><label>Kontak Darurat:</label><input type="text" id="kontakDarurat"></div>
+        <div class="form-group"><label>Wilayah:</label>
+            <select id="region">
+                <option value="Kota Bekasi">Kota Bekasi</option>
+                <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
+            </select>
+        </div>
+        <button class="btn-secondary" onclick="changeStep(2)">Lanjut ➡️</button>
+    </div>
+
+    <div id="step2" class="step">
+        <div class="form-group">
+            <label>Lokasi GPS Rumah Asli:</label>
+            <button class="btn-warning" onclick="getLocation()">📌 Kunci GPS</button>
+            <input type="text" id="lokasi" readonly style="background: #e9ecef;">
+            <input type="hidden" id="gpsAccuracy"><input type="hidden" id="userIp">
+        </div>
+        <button class="btn-secondary" onclick="changeStep(3)">Lanjut ke Kamera ➡️</button>
+    </div>
+
+    <div id="step3" class="step">
+        <div class="form-group">
+            <label>Pilih Jenis Foto:</label>
+            <select id="docType" onchange="changeOverlay()">
+                <option value="ktp">1. Foto KTP</option>
+                <option value="selfie">2. Selfie + KTP</option>
+                <option value="rumah">3. Rumah Jarak 2M</option>
+                <option value="kaleng">4. Kaleng No Rumah</option>
+            </select>
+        </div>
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <div id="cameraOverlay" class="overlay ktp-mode"></div>
+        </div>
+        <canvas id="canvas"></canvas>
+        <button class="btn-secondary" onclick="startCamera()">📷 Buka Kamera</button>
+        <button id="btnCapture" onclick="capturePhotoTemporarily()" disabled>📸 Ambil Foto</button>
+        
+        <div style="background:#eee; padding:10px; margin-bottom:10px;">
+            <div>KTP: <span id="badge-ktp" class="status-badge">Belum</span></div>
+            <div>Selfie: <span id="badge-selfie" class="status-badge">Belum</span></div>
+            <div>Rumah: <span id="badge-rumah" class="status-badge">Belum</span></div>
+            <div>Kaleng: <span id="badge-kaleng" class="status-badge">Belum</span></div>
+        </div>
+        <button id="btnSubmitAll" onclick="submitFormKolektif()">KIRIM PENDAFTARAN</button>
+        <div id="statusMessage" style="text-align:center; font-weight:bold;"></div>
+    </div>
+</div>
+
+<script>
+    const GAS_URL = "MASUKKAN_URL_DEPLOY_GAS_PELANGGAN_DISINI";
+    let tempFiles = { ktp: null, selfie: null, rumah: null, kaleng: null };
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const overlay = document.getElementById('cameraOverlay');
+    const btnCapture = document.getElementById('btnCapture');
+
+    window.onload = () => fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => document.getElementById('userIp').value = d.ip).catch(e=>console.log(e));
+
+    function changeStep(n) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById('step' + n).classList.add('active'); }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                p => { document.getElementById('gpsAccuracy').value = p.coords.accuracy; document.getElementById('lokasi').value = `https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`; alert("GPS Terkunci!"); },
+                e => alert("Gagal GPS. Aktifkan lokasi."), { enableHighAccuracy: true }
+            );
+        }
+    }
+
+    function changeOverlay() {
+        const t = document.getElementById('docType').value;
+        overlay.className = 'overlay ' + (t === 'ktp' ? 'ktp-mode' : (t === 'selfie' ? 'selfie-mode' : 'wide-mode'));
+    }
+
+    async function startCamera() {
+        try {
+            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+            btnCapture.disabled = false;
+        } catch (err) { alert("Akses kamera ditolak."); }
+    }
+
+    function capturePhotoTemporarily() {
+        const t = document.getElementById('docType').value;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        tempFiles[t] = canvas.toDataURL('image/jpeg', 0.8);
+        document.getElementById('badge-' + t).innerHTML = "✓ Siap";
+        document.getElementById('badge-' + t).className = "status-badge ready";
+    }
+
+    function submitFormKolektif() {
+        const p = {
+            nama: document.getElementById('nama').value, region: document.getElementById('region').value,
+            lokasi: document.getElementById('lokasi').value, sosmed: document.getElementById('sosmed').value,
+            kontakDarurat: document.getElementById('kontakDarurat').value, gpsAccuracy: document.getElementById('gpsAccuracy').value,
+            userIp: document.getElementById('userIp').value, files: tempFiles
+        };
+        if (!p.nama || !p.lokasi.includes("http") || !tempFiles.ktp || !tempFiles.selfie) return alert("Lengkapi data dan foto utama!");
+        
+        document.getElementById('statusMessage').innerText = "Mengirim...";
+        document.getElementById('btnSubmitAll').disabled = true;
+        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(p) })
+        .then(r => r.json()).then(res => {
+            document.getElementById('statusMessage').innerText = res.message;
+            if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        }).catch(e => document.getElementById('statusMessage').innerText = "Gagal Jaringan.");
+    }
+</script>
+</body>
+</html>

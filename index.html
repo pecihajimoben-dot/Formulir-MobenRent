@@ -307,13 +307,6 @@
             <div class="form-group"><label>Email Akun Ojol</label><input type="email" id="emailOjol" placeholder="Cth: emailku@domain.com"></div>
             <div class="form-group"><label>Akun Sosial Media (FB, IG, Tiktok, dll)</label><input type="text" id="sosmed" placeholder="Cth: @username_ig / Nama Facebook"></div>
             <div class="form-group"><label>Kontak Darurat (Istri atau Anak)</label><input type="text" id="kontakDarurat" placeholder="Cth: Siti (Istri) - 08987654321"></div>
-            <div class="form-group"><label>Wilayah Domisili</label>
-                <select id="region">
-                    <option value="Kota Bekasi">Kota Bekasi</option>
-                    <option value="Kabupaten Bekasi">Kabupaten Bekasi</option>
-                    <option value="Lainnya">Lainnya</option>
-                </select>
-            </div>
             <button class="btn-secondary" onclick="changeStep(2)">Lanjut ke Lokasi ➡️</button>
         </div>
 
@@ -771,7 +764,6 @@
             emailOjol: document.getElementById('emailOjol').value,
             sosmed: document.getElementById('sosmed').value,
             kontakDarurat: document.getElementById('kontakDarurat').value,
-            region: document.getElementById('region').value,
             
             lokasi: document.getElementById('lokasi').value,
             gpsAccuracy: document.getElementById('gpsAccuracy').value,

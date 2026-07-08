@@ -12,17 +12,38 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+
+        /* Daftar jenis foto - tampilan memanjang (vertikal), bukan dropdown */
+        .photo-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .btn-photo {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px; background: #f8f9fa; color: #333; border: 2px solid #ddd;
+            border-radius: 8px; cursor: pointer; width: 100%; font-size: 15px; font-weight: bold;
+            text-align: left; margin-bottom: 0;
+        }
+        .btn-photo.active-type { border-color: #007bff; background: #eaf3ff; }
+
         .camera-container { position: relative; width: 100%; max-width: 400px; margin: 15px auto; overflow: hidden; border-radius: 8px; background: #000; }
         video { width: 100%; height: auto; display: block; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 40px solid rgba(0, 0, 0, 0.5); box-sizing: border-box; transition: 0.3s; }
-        .overlay.ktp-mode { border-width: 60px 30px; border-radius: 10px; }
-        .overlay.selfie-mode { border-width: 40px 60px; border-radius: 50%; }
-        .overlay.wide-mode { border-width: 15px 15px; border-radius: 0; }
+
+        /* Overlay bingkai foto - kotak "jendela" ditengah, area luar digelapkan */
+        .overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border: 3px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+            box-sizing: border-box; pointer-events: none; transition: 0.2s;
+        }
+        /* KTP asli berbentuk landscape (lebih lebar dari tinggi), rasio kartu identitas ~1.586:1 */
+        .overlay.ktp-mode { width: 82%; aspect-ratio: 1.586 / 1; border-radius: 10px; }
+        /* Selfie + KTP: bingkai potrait agar wajah & kartu KTP di dada terlihat */
+        .overlay.selfie-mode { width: 68%; aspect-ratio: 3 / 4; border-radius: 16px; }
+        /* Rumah / kaleng nomor rumah: bingkai lebar biasa */
+        .overlay.wide-mode { width: 92%; aspect-ratio: 4 / 3; border-radius: 6px; }
+
         button { padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
         button.btn-secondary { background: #007bff; }
         button.btn-warning { background: #ffc107; color: black; }
         canvas { display: none; }
-        .status-badge { display: inline-block; padding: 5px; background: #ddd; font-size: 12px; border-radius: 3px; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 4px 8px; background: #ddd; font-size: 12px; border-radius: 3px; font-weight: bold; }
         .status-badge.ready { background: #28a745; color: white; }
     </style>
 </head>
@@ -30,7 +51,7 @@
 
 <div class="container">
     <h2 style="text-align:center; color: #28a745;">Pendaftaran Moben</h2>
-    
+
     <div id="step1" class="step active">
         <div class="form-group"><label>Nama Lengkap:</label><input type="text" id="nama"></div>
         <div class="form-group"><label>Akun Sosmed (IG/FB):</label><input type="text" id="sosmed"></div>
@@ -56,28 +77,30 @@
 
     <div id="step3" class="step">
         <div class="form-group">
-            <label>Pilih Jenis Foto:</label>
-            <select id="docType" onchange="changeOverlay()">
-                <option value="ktp">1. Foto KTP</option>
-                <option value="selfie">2. Selfie + KTP</option>
-                <option value="rumah">3. Rumah Jarak 2M</option>
-                <option value="kaleng">4. Kaleng No Rumah</option>
-            </select>
+            <label>Pilih & Ambil Foto (urutkan dari atas ke bawah):</label>
+            <div class="photo-list">
+                <button type="button" class="btn-photo" id="type-ktp" onclick="openCamera('ktp')">
+                    <span>1. Foto KTP</span><span id="badge-ktp" class="status-badge">Belum</span>
+                </button>
+                <button type="button" class="btn-photo" id="type-selfie" onclick="openCamera('selfie')">
+                    <span>2. Selfie + KTP</span><span id="badge-selfie" class="status-badge">Belum</span>
+                </button>
+                <button type="button" class="btn-photo" id="type-rumah" onclick="openCamera('rumah')">
+                    <span>3. Foto Rumah Jarak 2M</span><span id="badge-rumah" class="status-badge">Belum</span>
+                </button>
+                <button type="button" class="btn-photo" id="type-kaleng" onclick="openCamera('kaleng')">
+                    <span>4. Foto Kaleng No Rumah</span><span id="badge-kaleng" class="status-badge">Belum</span>
+                </button>
+            </div>
         </div>
-        <div class="camera-container">
-            <video id="video" autoplay playsinline></video>
-            <div id="cameraOverlay" class="overlay ktp-mode"></div>
+
+        <div class="camera-container" id="cameraContainer" style="display:none;">
+            <video id="video" autoplay playsinline muted></video>
+            <div id="cameraOverlay" class="overlay"></div>
         </div>
         <canvas id="canvas"></canvas>
-        <button class="btn-secondary" onclick="startCamera()">📷 Buka Kamera</button>
-        <button id="btnCapture" onclick="capturePhotoTemporarily()" disabled>📸 Ambil Foto</button>
-        
-        <div style="background:#eee; padding:10px; margin-bottom:10px;">
-            <div>KTP: <span id="badge-ktp" class="status-badge">Belum</span></div>
-            <div>Selfie: <span id="badge-selfie" class="status-badge">Belum</span></div>
-            <div>Rumah: <span id="badge-rumah" class="status-badge">Belum</span></div>
-            <div>Kaleng: <span id="badge-kaleng" class="status-badge">Belum</span></div>
-        </div>
+        <button id="btnCapture" onclick="capturePhotoTemporarily()" style="display:none;">📸 Ambil Foto</button>
+
         <button id="btnSubmitAll" onclick="submitFormKolektif()">KIRIM PENDAFTARAN</button>
         <div id="statusMessage" style="text-align:center; font-weight:bold;"></div>
     </div>
@@ -86,10 +109,14 @@
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzJCp-Vf4B4LmkqGVC6M6sQrxceXTkHRmgSqgjbNhheIBdICaRuY07LZkIG2uhDC6yW/exec";
     let tempFiles = { ktp: null, selfie: null, rumah: null, kaleng: null };
+    let currentDocType = null;
+    let currentStream = null;
+
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const overlay = document.getElementById('cameraOverlay');
     const btnCapture = document.getElementById('btnCapture');
+    const cameraContainer = document.getElementById('cameraContainer');
 
     window.onload = () => fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => document.getElementById('userIp').value = d.ip).catch(e=>console.log(e));
 
@@ -104,20 +131,50 @@
         }
     }
 
-    function changeOverlay() {
-        const t = document.getElementById('docType').value;
-        overlay.className = 'overlay ' + (t === 'ktp' ? 'ktp-mode' : (t === 'selfie' ? 'selfie-mode' : 'wide-mode'));
+    // Frame bingkai per jenis foto
+    function overlayClassFor(type) {
+        if (type === 'ktp') return 'ktp-mode';
+        if (type === 'selfie') return 'selfie-mode';
+        return 'wide-mode'; // rumah & kaleng
     }
 
-    async function startCamera() {
+    // Kamera depan hanya untuk selfie, sisanya kamera belakang
+    function facingModeFor(type) {
+        return type === 'selfie' ? 'user' : 'environment';
+    }
+
+    async function openCamera(type) {
+        currentDocType = type;
+
+        // tandai tombol jenis foto yang sedang aktif
+        document.querySelectorAll('.btn-photo').forEach(b => b.classList.remove('active-type'));
+        document.getElementById('type-' + type).classList.add('active-type');
+
+        // set bingkai sesuai jenis foto
+        overlay.className = 'overlay ' + overlayClassFor(type);
+
+        // hentikan stream kamera sebelumnya (kalau ada) sebelum ganti kamera depan/belakang
+        if (currentStream) {
+            currentStream.getTracks().forEach(t => t.stop());
+            currentStream = null;
+        }
+
         try {
-            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-            btnCapture.disabled = false;
-        } catch (err) { alert("Akses kamera ditolak."); }
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingModeFor(type) },
+                audio: false
+            });
+            video.srcObject = currentStream;
+            cameraContainer.style.display = 'block';
+            btnCapture.style.display = 'block';
+        } catch (err) {
+            alert("Akses kamera ditolak atau tidak tersedia.");
+        }
     }
 
     function capturePhotoTemporarily() {
-        const t = document.getElementById('docType').value;
+        if (!currentDocType) return;
+        const t = currentDocType;
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         tempFiles[t] = canvas.toDataURL('image/jpeg', 0.8);
@@ -133,13 +190,13 @@
             userIp: document.getElementById('userIp').value, files: tempFiles
         };
         if (!p.nama || !p.lokasi.includes("http") || !tempFiles.ktp || !tempFiles.selfie) return alert("Lengkapi data dan foto utama!");
-        
+
         document.getElementById('statusMessage').innerText = "Mengirim...";
         document.getElementById('btnSubmitAll').disabled = true;
         fetch(GAS_URL, { method: 'POST', body: JSON.stringify(p) })
         .then(r => r.json()).then(res => {
             document.getElementById('statusMessage').innerText = res.message;
-            if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
         }).catch(e => document.getElementById('statusMessage').innerText = "Gagal Jaringan.");
     }
 </script>

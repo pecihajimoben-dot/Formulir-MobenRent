@@ -275,6 +275,58 @@
         text-align: center; font-weight: 600; font-size: 13.5px;
         margin-top: 10px; color: var(--navy); min-height: 18px;
     }
+
+    .success-card {
+        display: none;
+        text-align: center;
+        padding: 8px 4px 4px;
+        animation: fadeIn .4s ease;
+    }
+    .success-check {
+        width: 68px; height: 68px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--green), #3fbf70);
+        display: flex; align-items: center; justify-content: center;
+        margin: 4px auto 16px; font-size: 34px; color: #fff;
+        box-shadow: 0 10px 24px -8px rgba(47,158,88,0.5);
+    }
+    .success-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 800; font-size: 19px; color: var(--navy);
+        margin: 0 0 6px;
+    }
+    .success-sub {
+        font-size: 13.5px; color: var(--muted); margin: 0 0 20px;
+        line-height: 1.5;
+    }
+    .success-ref {
+        background: var(--gold-soft); border: 1px dashed var(--gold);
+        border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;
+    }
+    .success-ref span {
+        display: block; font-size: 11px; color: var(--muted);
+        font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+    .success-ref strong {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 17px; color: var(--navy); letter-spacing: .02em;
+    }
+    .success-steps {
+        text-align: left; background: #F7F8FA; border-radius: 12px;
+        padding: 14px 16px; margin-bottom: 18px;
+    }
+    .success-steps li {
+        font-size: 13px; color: var(--ink); margin-bottom: 8px;
+        line-height: 1.45;
+    }
+    .success-steps li:last-child { margin-bottom: 0; }
+    .success-steps b { color: var(--navy); }
+    .btn-wa {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 14px; border: none; border-radius: 12px;
+        background: #25D366; color: #fff; font-weight: 700; font-size: 14.5px;
+        text-decoration: none; font-family: 'Inter', sans-serif;
+    }
 </style>
 </head>
 <body>
@@ -425,6 +477,29 @@
             </div>
             
             <div id="statusMessage"></div>
+
+            <div class="success-card" id="successCard">
+                <div class="success-check">✓</div>
+                <p class="success-title">Pendaftaran Selesai!</p>
+                <p class="success-sub">Data dan foto Anda sudah tersimpan dengan aman di sistem kami.</p>
+
+                <div class="success-ref">
+                    <span>Nomor Referensi</span>
+                    <strong id="refNumber">-</strong>
+                </div>
+
+                <ul class="success-steps">
+                    <li>✅ <b>Langkah 1:</b> Formulir &amp; berkas Anda sudah kami terima.</li>
+                    <li>⏳ <b>Langkah 2:</b> Tim kami akan memeriksa data dalam <b>1x24 jam</b> (hari kerja).</li>
+                    <li>📲 <b>Langkah 3:</b> Hasil persetujuan akan dikirim lewat <b>WhatsApp</b> ke nomor yang Anda daftarkan.</li>
+                </ul>
+
+                <p class="success-sub" style="margin-bottom:14px;">Simpan nomor referensi di atas untuk keperluan konfirmasi bila diperlukan.</p>
+
+                <a class="btn-wa" id="waConfirmLink" href="#" target="_blank" rel="noopener">
+                    💬 Hubungi Admin via WhatsApp
+                </a>
+            </div>
         </div>
 
     </div>
@@ -836,10 +911,8 @@
         })
         .then(r => r.json())
         .then(res => {
-            msgBox.style.color = "var(--green)";
-            msgBox.innerText = "✅ Berhasil! " + (res.message || "Pendaftaran Terkirim.");
             if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-            btnNext.style.display = 'none';
+            showSuccessCard(res, payload);
         })
         .catch(e => {
             msgBox.style.color = "var(--red)";
@@ -847,6 +920,48 @@
             btnNext.disabled = false;
             btnRetake.disabled = false;
         });
+    }
+
+    // Nomor WA admin yang akan dihubungi user untuk konfirmasi/tindak lanjut.
+    // GANTI dengan nomor WA admin yang benar (format: kode negara tanpa "+" atau "0", mis. 6281234567890)
+    const ADMIN_WA_NUMBER = "6281234567890";
+
+    function generateRefNumber() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        return `HM-${y}${m}${d}-${rand}`;
+    }
+
+    function showSuccessCard(res, payload) {
+        // Sembunyikan elemen langkah foto & pesan status lama
+        document.getElementById('cameraContainer').style.display = 'none';
+        document.getElementById('previewWrap').style.display = 'none';
+        document.getElementById('ocrGroup').style.display = 'none';
+        btnCapture.style.display = 'none';
+        btnRetake.style.display = 'none';
+        btnNext.style.display = 'none';
+        document.querySelector('.row-btns').style.display = 'none';
+        document.getElementById('statusMessage').style.display = 'none';
+        document.getElementById('photoStepTitle').style.display = 'none';
+        document.getElementById('photoStepHint').style.display = 'none';
+
+        // Update progress bar jadi 100%
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('progressLabel').innerText = 'Pendaftaran Selesai';
+
+        // Nomor referensi: pakai dari server bila tersedia, kalau tidak generate lokal
+        const ref = (res && res.refNumber) ? res.refNumber : generateRefNumber();
+        document.getElementById('refNumber').innerText = ref;
+
+        const waText = encodeURIComponent(
+            `Halo Admin, saya sudah mengisi formulir pendaftaran sewa Moben.\nNama: ${payload.nama}\nNomor Referensi: ${ref}\nMohon info status persetujuannya. Terima kasih.`
+        );
+        document.getElementById('waConfirmLink').href = `https://wa.me/${ADMIN_WA_NUMBER}?text=${waText}`;
+
+        document.getElementById('successCard').style.display = 'block';
     }
 </script>
 </body>

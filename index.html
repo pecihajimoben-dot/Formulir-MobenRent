@@ -566,7 +566,9 @@
             img.onload = function() {
                 const cvs = document.createElement('canvas');
                 let width = img.width; let height = img.height;
-                const MAX_SIZE = 1000;
+                
+                // PERUBAHAN: Resolusi diturunkan dari 1000 ke 600 agar pengiriman 3x lebih cepat
+                const MAX_SIZE = 600; 
                 
                 if (width > height && width > MAX_SIZE) { 
                     height *= MAX_SIZE / width; width = MAX_SIZE; 
@@ -577,7 +579,8 @@
                 cvs.width = width; cvs.height = height;
                 const ctx = cvs.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                callback(cvs.toDataURL('image/jpeg', 0.7)); 
+                // PERUBAHAN: Kualitas JPEG diturunkan dari 0.7 menjadi 0.65
+                callback(cvs.toDataURL('image/jpeg', 0.65)); 
             }
             img.src = e.target.result;
         }
